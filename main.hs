@@ -116,12 +116,13 @@ playbot b False = do
 
 --This function tests if the move is valid and plays it if it is
 movement :: Board -> Move -> Bool -> IO()
-movement b m x = if validmove b m (b !! (fst m))
+movement b m x = if validmove b m (not x)
                  then putStrLn "Good Move" >> play (executemove b m) x
                  else putStrLn "Bad Move" >> play b (not x)
 
+
 movementbot :: Board -> Move -> IO()
-movementbot b m = if validmove b m (b !! (fst m))
+movementbot b m = if validmove b m True
                then putStrLn "Good Move" >> playbot (executemove b m) False
                else putStrLn "Bad Move" >> playbot b True
 

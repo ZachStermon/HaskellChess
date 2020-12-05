@@ -35,21 +35,33 @@ DONE
   IO prompts
   alternate turns
   fix main
+  not crash program with invalid move
+  valid move checking
 TODO
-  **valid move checking**
   Random bot??
+  checking if moving through a piece
+POSSIBLE TODO
+  checkmate
+  stalemate
+  get list of valid moves
+  getscore
+  in check after move
+
+ITS A REACH
+  minimax
+  AB pruning
 -}
 
 {-
 board representation is a single vector:
-8 | 0  1  2  3  4  5  6  7  | 8
-7 | 8  9  10 11 12 13 14 15 | 7
-6 | 16 17 18 19 20 21 22 23 | 6
-5 | 24 25 26 27 28 29 30 31 | 5
-4 | 32 33 34 35 36 37 38 39 | 4
-3 | 40 41 42 43 44 45 46 47 | 3
-2 | 48 49 50 51 52 53 54 55 | 2
-1 | 56 57 58 59 60 61 62 63 | 1
+8 | 0  1  2  3  4  5  6  7  | 8 0
+7 | 8  9  10 11 12 13 14 15 | 7 1
+6 | 16 17 18 19 20 21 22 23 | 6 2
+5 | 24 25 26 27 28 29 30 31 | 5 3
+4 | 32 33 34 35 36 37 38 39 | 4 4
+3 | 40 41 42 43 44 45 46 47 | 3 5
+2 | 48 49 50 51 52 53 54 55 | 2 6
+1 | 56 57 58 59 60 61 62 63 | 1 7
     A  B  C  D  E  F  G  H
 -}
 
@@ -105,7 +117,6 @@ ctc 'G' = 6
 ctc 'H' = 7
 
 --input will look like a2 c6
-
 stringtomove :: String -> Move
 stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
 
@@ -134,50 +145,98 @@ executemove :: Board -> Move -> Board
 executemove b m = setspotonboard (setspotonboard b (getspotonboard b (fst m)) (snd m)) (getspot '-') (fst m)
 
 inrange :: Move -> Bool
-inrange x = ((fst x >= 0 && fst x <= 63) && (snd x >= 0 && snd x <= 63))
+inrange x = ((fst x) >= 0 && (fst x) <= 63) && ((snd x) >= 0 && (snd x) <= 63)
 
-exists :: Board -> Move -> Bool
-exists b m = not (showspot (b !! (fst m)) == '-')
+exists :: Board -> Int -> Bool
+exists b i = (showspot (b !! i) /= '-')
 
 changed :: Move -> Bool
-changed m = not(fst x == snd x)
+changed m = (fst m) /= (snd m)
 
 notfriendlyfire :: Board -> Move -> Bool
-notfriendlyfire b m = not ((getspotonboard b (fst m)) == (getspotonboard b (snd m)))
+notfriendlyfire b m = ((getcolor (getspotonboard b (fst m))) /= (getcolor (getspotonboard b (snd m))))
 
-correctturn :: Board -> Move -> Bool -> Bool
-correctturn b m True
-correctturn b m False
+correctturn :: Board -> Int -> Bool -> Bool
+correctturn b i True  = getcolor (b !! i) == White
+correctturn b i False = getcolor (b !! i) == Black
+
+getcolor :: Spot -> Color
+getcolor (Just (Piece _ White)) = White
+getcolor (Just (Piece _ Black)) = Black
+getcolor _                      = undefined
+
+colortobool :: Color -> Bool
+colortobool White = True
+colortobool Black = False
+
+isenemy :: Board -> Int -> Bool -> Bool
+isenemy b i t = (exists b i) && (colortobool (getcolor (b !! i)) /= t)
 
 {-
 * check if O and D are in range 0-63
 * check if O is empty/null
-check if its the correct for the person moving
+* check if its the correct for the person moving
 * check if O==D
-check if friendly fire is happening
+* check if friendly fire is happening
 
 *test if a piece is in the way (not for knights)*
 ***test movement type is right***
 -}
 
 validmove :: Board -> Move -> Bool -> Bool
-validmove b m t = (inrange m) && (exists b m) && (correctturn b m t) && (changed m) && notfriendlyfire (b m)
+validmove b m t = (validmove' b m (getspotonboard b (fst m))) && (inrange m)
+                  && (exists b (fst m)) && (correctturn b (fst m) t) && (changed m)
+                  && (if (exists b (snd m)) then (notfriendlyfire b m) else True)
 
-validmove :: Board -> Move -> Spot -> Bool
-validmove b m (Just (Piece Pawn White))   = True
-validmove b m (Just (Piece Pawn Black))   = True
-validmove b m (Just (Piece Knight _))     = True
-validmove b m (Just (Piece Bishop _))     = True
-validmove b m (Just (Piece Rook _))       = True
-validmove b m (Just (Piece Queen _))      = True
-validmove b m (Just (Piece King _))       = True
-validmove _ _ _                           = False
+getvalidmoves :: Board -> Bool -> Int -> Int -> [Move]
+getvalidmoves b t i1 i2 = if (validmove b (i1,i2) t) then xs: else getvalidmoves b t i1 (i2 + 1)
 
-getrow :: Int -> Int
-getrow i = quot i 8
+validmove' :: Board -> Move -> Spot -> Bool
+validmove' b m (Just (Piece Pawn White))   = pmovementw b m
+validmove' b m (Just (Piece Pawn Black))   = pmovementb b m
+validmove' b m (Just (Piece Knight _))     = nmovement m
+validmove' b m (Just (Piece Bishop _))     = (bmovement m) && (notblocked b m False)
+validmove' b m (Just (Piece Rook _))       = (rmovement m) && (notblocked b m True)
+validmove' b m (Just (Piece Queen _))      = ((rmovement m) && (notblocked b m True))|| ((bmovement m) && (notblocked b m False))
+validmove' b m (Just (Piece King _))       = kmovement m
+validmove' _ _ _                           = False
 
-getcol :: Int -> Int
-getcol i = mod i 8
+
+pmovementw :: Board -> Move -> Bool
+pmovementw b m = ((col (fst m) == col (snd m)) && (row (fst m) - row (snd m) == 1) && (not (exists b (snd m)))) --if columns equal eachother and (destination row - origin row = 1) and no piece exists at destination
+              || ((col (fst m) == col (snd m)) && (row (fst m) - row (snd m) == 2) && (not (exists b (snd m))) && (not (exists b ((fst m) - 8))) && (row(fst m) == 6)) --this line is for first pawn move double move
+              || (((fst m) - (snd m) == 9) && (isenemy b (snd m) True) && (col (fst m) /= 0)) --upleft -9
+              || (((fst m) - (snd m) == 7) && (isenemy b (snd m) True) && (col (fst m) /= 7)) --upright -7
+
+pmovementb :: Board -> Move -> Bool
+pmovementb b m = ((col (fst m) == col (snd m)) && (row (snd m) - row (fst m) == 1) && (not (exists b (snd m)))) --one pawn move forward
+              || ((col (fst m) == col (snd m)) && (row (snd m) - row (fst m) == 2) && (not (exists b (snd m))) && (not (exists b ((fst m) + 8))) && (row (fst m) == 1)) --doublepawn move
+              || (((snd m) - (fst m) == 7) && (isenemy b (snd m) False) && (col (fst m) /= 0)) --downleft +7
+              || (((snd m) - (fst m) == 9) && (isenemy b (snd m) False) && (col (fst m) /= 7)) --downright +9
+
+
+nmovement :: Move -> Bool
+nmovement m = ((abs (row (fst m) - row (snd m)) * (abs (col (fst m) - col (snd m)))) == 2)
+
+bmovement :: Move -> Bool
+bmovement m = (abs(row(fst m) - row (snd m)) == abs(col(fst m) - col(snd m)))
+
+kmovement :: Move -> Bool
+kmovement m = (abs (row (fst m) - row (snd m)) <= 1 && (abs (col (fst m) - col (snd m))) <= 1)
+
+rmovement :: Move -> Bool
+rmovement m = ((row(fst m)) == (row(snd m))) /= (((col(fst m)) == (col(snd m))))
+
+--This bool is NOT side it is the type of movement True = Rook movement, False = Bishop Movement
+notblocked :: Board -> Move -> Bool -> Bool
+notblocked b m type = True
+
+
+row :: Int -> Int
+row i = quot i 8
+
+col :: Int -> Int
+col i = mod i 8
 
 
 getbotmove :: Board -> Int -> Int -> Move
