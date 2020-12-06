@@ -92,12 +92,15 @@ playsetup = do
 play :: Board -> Bool -> IO()
 play b True = do
                 printboard b
+                  --TEMP
+                putStrLn ((getmoves b True))
                 putStrLn "It Is Now Whites Turn," --(" ++ player1name ++ ")"
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
                 movement (b) (stringtomove(move)) False
 play b False = do
                 printboard b
+                putStrLn ((getmoves b False))
                 putStrLn "It Is Now Blacks Turn, " --(" ++ player2name ++ ")"
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
@@ -112,7 +115,7 @@ playbot b True = do
                 movementbot (b) (stringtomove(move))
 playbot b False = do
                 printboard b
-                playbot (executemove b (1, 2)) True
+                playbot (executemove b (getbotmove b)) True
 
 --This function tests if the move is valid and plays it if it is
 movement :: Board -> Move -> Bool -> IO()

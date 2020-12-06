@@ -5,7 +5,7 @@ module Chess
 , setspotonboard , getspotonboard
 , executemove , validmove
 , format , split
-, initial , stringtomove, getbotmove
+, initial , stringtomove, getbotmove, getmoves
 , Color , Type , Piece , Spot , Board , Move
 ) where
 
@@ -14,7 +14,7 @@ data Type = Pawn | Knight | Bishop | Rook | Queen | King deriving (Show, Eq)
 data Piece = Piece Type Color deriving (Show, Eq)
 type Spot = Maybe Piece
 type Board = [Spot]
-type Move = (Int, Int)
+type Move = (Int, Int) 
 data Player = Player {name :: String, age :: Int} deriving (Show)
 data Game = Game {w :: Player, b :: Player} deriving (Show)
 
@@ -37,16 +37,15 @@ DONE
   fix main
   not crash program with invalid move
   valid move checking
-TODO
-  Random bot??
   checking if moving through a piece
-POSSIBLE TODO
-  checkmate
-  stalemate
   get list of valid moves
+TODO
+  ***checkmate***
+  **Random bot?**
+  *stalemate*
+POSSIBLE TODO
   getscore
   in check after move
-
 ITS A REACH
   minimax
   AB pruning
@@ -116,7 +115,7 @@ ctc 'F' = 5
 ctc 'G' = 6
 ctc 'H' = 7
 
---input will look like a2 c6
+--input will look like a2c6
 stringtomove :: String -> Move
 stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
 
@@ -183,13 +182,20 @@ isenemy b i t = (exists b i) && (colortobool (getcolor (b !! i)) /= t)
 ***test movement type is right***
 -}
 
+
+getmoves :: Board -> Bool -> [Move]
+getmoves b t = getmoves' b t 0 0
+
+getmoves' :: Board -> Bool -> Int -> Int -> [Move]
+getmoves' b t 63 62 = if (validmove b (63,62) t) then [(63,62)] else []
+getmoves' b t i1 63 = if (validmove b (i1,63) t) then (i1,63):getmoves' b t (i1 + 1) 0 else getmoves' b t (i1 + 1) 0
+getmoves' b t i1 i2 = if (validmove b (i1,i2) t) then (i1,i2):getmoves' b t i1 (i2 + 1) else getmoves' b t i1 (i2 + 1)
+
 validmove :: Board -> Move -> Bool -> Bool
 validmove b m t = (validmove' b m (getspotonboard b (fst m))) && (inrange m)
                   && (exists b (fst m)) && (correctturn b (fst m) t) && (changed m)
                   && (if (exists b (snd m)) then (notfriendlyfire b m) else True)
 
-getvalidmoves :: Board -> Bool -> Int -> Int -> [Move]
-getvalidmoves b t i1 i2 = if (validmove b (i1,i2) t) then xs: else getvalidmoves b t i1 (i2 + 1)
 
 validmove' :: Board -> Move -> Spot -> Bool
 validmove' b m (Just (Piece Pawn White))   = pmovementw b m
@@ -197,7 +203,7 @@ validmove' b m (Just (Piece Pawn Black))   = pmovementb b m
 validmove' b m (Just (Piece Knight _))     = nmovement m
 validmove' b m (Just (Piece Bishop _))     = (bmovement m) && (notblocked b m False)
 validmove' b m (Just (Piece Rook _))       = (rmovement m) && (notblocked b m True)
-validmove' b m (Just (Piece Queen _))      = ((rmovement m) && (notblocked b m True))|| ((bmovement m) && (notblocked b m False))
+validmove' b m (Just (Piece Queen _))      = ((rmovement m) && (notblocked b m True)) || ((bmovement m) && (notblocked b m False))
 validmove' b m (Just (Piece King _))       = kmovement m
 validmove' _ _ _                           = False
 
@@ -229,7 +235,50 @@ rmovement m = ((row(fst m)) == (row(snd m))) /= (((col(fst m)) == (col(snd m))))
 
 --This bool is NOT side it is the type of movement True = Rook movement, False = Bishop Movement
 notblocked :: Board -> Move -> Bool -> Bool
-notblocked b m type = True
+notblocked b m True  = if (col (fst m) == col (snd m)) then rookvertical b m else rookhorizontal b m
+notblocked b (o,d) False = if (mod o 9 == mod d 9) then bishopleft b (o,d) else bishopright b (o,d)
+
+rookhorizontal :: Board -> Move -> Bool
+rookhorizontal b m = if (col (fst m) < col (snd m)) then rookright b m else rookleft b m
+
+rookvertical :: Board -> Move -> Bool
+rookvertical b m = if (row (fst m) < row (snd m)) then rookdown b m else rookup b m
+
+rookup :: Board -> Move -> Bool
+rookup b (o,d) = if (exists b (o - 8) && (o - 8 /= d)) then False else (if (o - 8 == d) then True else rookup b (o - 8, d))
+
+rookdown :: Board -> Move -> Bool
+rookdown b (o,d) = if (exists b (o + 8) && (o + 8 /= d)) then False else (if (o + 8 == d) then True else rookdown b (o + 8, d))
+
+rookleft :: Board -> Move -> Bool
+rookleft b (o,d) = if (exists b (o - 1) && (o - 1 /= d)) then False else (if (o - 1 == d) then True else rookleft b (o - 1, d))
+
+rookright :: Board -> Move -> Bool
+rookright b (o,d) = if (exists b (o + 1) && (o + 1 /= d)) then False else (if (o + 1 == d) then True else rookright b (o + 1, d))
+
+
+
+bishopleft :: Board -> Move -> Bool
+bishopleft b m = if ((fst m) < (snd m)) then downright b m else upleft b m
+
+bishopright :: Board -> Move -> Bool
+bishopright b m = if ((fst m) < (snd m)) then downleft b m else upright b m
+
+downright :: Board -> Move -> Bool
+downright b (o,d) = if (exists b (o + 9) && (o + 9 /= d)) then False else (if (o + 9 == d) then True else downright b (o + 9, d))
+
+downleft :: Board -> Move -> Bool
+downleft b (o,d) = if (exists b (o + 7) && (o + 7 /= d)) then False else (if (o + 7 == d) then True else downleft b (o + 7, d))
+
+upright :: Board -> Move -> Bool
+upright b (o,d) = if (exists b (o - 7) && (o - 7 /= d)) then False else (if (o - 7 == d) then True else upright b (o - 7, d))
+
+upleft :: Board -> Move -> Bool
+upleft b (o,d) = if (exists b (o - 9) && (o - 9 /= d)) then False else (if (o - 9 == d) then True else upleft b (o - 9, d))
+
+
+--LEFT DIAGONAL \ mod 9
+--RIGHT DIAGONAL / mod 7
 
 
 row :: Int -> Int
@@ -238,10 +287,8 @@ row i = quot i 8
 col :: Int -> Int
 col i = mod i 8
 
-
-getbotmove :: Board -> Int -> Int -> Move
-getbotmove b a1 a2 = (a1,a2)
-
+getbotmove :: Board -> Move
+getbotmove b = (1,2)
 
 format :: String -> [String]
 format s = split 8 s
