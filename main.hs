@@ -16,7 +16,7 @@ main = do
        putStrLn "This program uses FEN ASCII notation to represent chess pieces"
        putStrLn "Uppercase letters are white, lowercase are black"
        putStrLn ""
-       putStrLn "If you are still confused, type `I` for more information, otherwise type `N` to select your game type: "
+       putStrLn "If you are still confused, type (I) for more information, otherwise type (G) to select your game type: "
        moreinfo <- getChar
        if moreinfo == 'i' || moreinfo == 'I'
        then info
@@ -92,15 +92,12 @@ playsetup = do
 play :: Board -> Bool -> IO()
 play b True = do
                 printboard b
-                  --TEMP
-                putStrLn ((getmoves b True))
                 putStrLn "It Is Now Whites Turn," --(" ++ player1name ++ ")"
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
                 movement (b) (stringtomove(move)) False
 play b False = do
                 printboard b
-                putStrLn ((getmoves b False))
                 putStrLn "It Is Now Blacks Turn, " --(" ++ player2name ++ ")"
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
@@ -109,13 +106,16 @@ play b False = do
 playbot :: Board -> Bool -> IO()
 playbot b True = do
                 printboard b
-                putStrLn "It Is Now Whites Turn,"
-                putStrLn "Enter valid move (a1b2): "
-                move <- getLine
-                movementbot (b) (stringtomove(move))
+                if gameover b True then reset' False else do
+                      putStrLn "It Is Now Whites Turn,"
+                      putStrLn "Enter valid move (a1b2): "
+                      move <- getLine
+                      movementbot (b) (stringtomove(move))
+
 playbot b False = do
                 printboard b
-                playbot (executemove b (getbotmove b)) True
+                if gameover b False then reset' True else do
+                      playbot (executemove b (getbotmove b)) True
 
 --This function tests if the move is valid and plays it if it is
 movement :: Board -> Move -> Bool -> IO()
@@ -128,6 +128,17 @@ movementbot :: Board -> Move -> IO()
 movementbot b m = if validmove b m True
                then putStrLn "Good Move" >> playbot (executemove b m) False
                else putStrLn "Bad Move" >> playbot b True
+
+reset' :: Bool -> IO()
+reset' True  = do
+                putStrLn "White wins! Click (Enter) to start a new game"
+                start
+reset' False = do
+                putStrLn "Black wins! Click (Enter) to start a new game"
+                start
+
+gameover :: Board -> Bool -> Bool
+gameover b t = (checkmate b t) || (stalemate b t)
 
 --prints a board to stdout
 printboard :: Board -> IO()
