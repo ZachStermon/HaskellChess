@@ -1,4 +1,8 @@
 # HaskellChess
+
+This project is an ongoing chess application written entirely in Haskell. The program features effiecient AI using minimax with A/B pruning.
+
+
 Some reseach for this project was found at: 
 
 https://stackoverflow.com/questions/8680888/subdividing-a-list-in-haskell 
