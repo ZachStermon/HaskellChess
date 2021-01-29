@@ -2,6 +2,9 @@
 
 This project is an ongoing chess application written entirely in Haskell. The program features effiecient AI using minimax with A/B pruning.
 
+# Instructions
+
+Run main.hs and type "main" in GHCI and follow on screen instructions
 
 Some reseach for this project was found at: 
 
