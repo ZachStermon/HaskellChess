@@ -10,36 +10,31 @@ module Chess
 , checkmate , stalemate
 ) where
 
+import Weights
+import Helpers
+
 data Type = Pawn | Knight | Bishop | Rook | Queen | King deriving (Show, Eq)
 data Piece = Piece Type Bool deriving (Show, Eq)
 type Spot = Maybe Piece
 type Board = [Spot]
 type Move = (Int, Int)
-data Tree = Leaf | Node Board [Tree] deriving Show
-type MoveList = [Move]
 
---GameTree = Node initial []
-
-staleboard = getboard    ("kr--------r-----------------------------r-------P-------K-------")
-checkmateboard = getboard("----k------------------------------q---------------PPb-----QKB--")
-testboard = getboard     ("rnbqkb-rppp---pp-----------nNp-Q--B-------------PPPP-PPPRNB-K--R")
-mateinthree = getboard   (empty ++ empty ++ "-Q------" ++ "-K------" ++ empty ++ "k-------" ++ empty ++ empty)
-mateintwo = getboard   (empty ++ "-Q------" ++ empty ++ "k-------" ++ empty ++ "--K-----" ++ empty ++ empty)
-initial = getboard(init_)
-init_ = "rnbqkbnr" ++ "pppppppp" ++ empty ++ empty ++ empty ++ empty ++ "PPPPPPPP" ++ "RNBQKBNR"
+staleboard =     getboard ("kr--------r-----------------------------r-------P-------K-------")
+checkmateboard = getboard ("----k------------------------------q---------------PPb-----QKB--")
+testboard =      getboard ("rnbqkb-rppp---pp-----------nNp-Q--B-------------PPPP-PPPRNB-K--R")
+mateinthree =    getboard (empty ++ empty ++ "-Q------" ++ "-K------" ++ empty ++ "k-------" ++ empty ++ empty)
+mateintwo =      getboard (empty ++ "-Q------" ++ empty ++ "k-------" ++ empty ++ "--K-----" ++ empty ++ empty)
+initial =        getboard ("rnbqkbnr" ++ "pppppppp" ++ empty ++ empty ++ empty ++ empty ++ "PPPPPPPP" ++ "RNBQKBNR")
 empty = "--------"
 
 {-
 DONE
-
 TODO
   **Random bot?**
 POSSIBLE TODO
-
 ITS A REACH
   minimax
   AB pruning
-
 CASTLING
   True
   king must be on 60
@@ -92,26 +87,7 @@ getpiece 'k' = Just (Piece King False)
 getpiece  _  = Nothing
 
 
-ctr :: Char -> Int
-ctr x = abs ((read [x]) - 8)
 
-ctc :: Char -> Int
-ctc 'a' = 0
-ctc 'b' = 1
-ctc 'c' = 2
-ctc 'd' = 3
-ctc 'e' = 4
-ctc 'f' = 5
-ctc 'g' = 6
-ctc 'h' = 7
-ctc 'A' = 0
-ctc 'B' = 1
-ctc 'C' = 2
-ctc 'D' = 3
-ctc 'E' = 4
-ctc 'F' = 5
-ctc 'G' = 6
-ctc 'H' = 7
 
 --input will look like a2c6
 stringtomove :: String -> Move
@@ -314,19 +290,19 @@ notcheckmove :: Board -> Move -> Bool -> Bool
 notcheckmove b (o,d) t | d < 0 || d > 63 = error ("error in notcheckmove" ++ boardtostring b)
 notcheckmove b (o,d) t = not (incheck (executemove b (o,d)) t) && b!!d /= (Just (Piece King True)) && b!!d /= (Just (Piece King False)) && existskings b
 
-staticeval :: Board -> Int -> Float
+staticeval :: Board -> Int -> Double
 staticeval b d | checkmate b False = minVal + fromIntegral d
 staticeval b d | checkmate b True  = maxVal - fromIntegral d
 staticeval b d | stalemate b True || stalemate b False  = 0.0
 staticeval b d = staticeval' b 0
 
-staticeval' :: Board -> Int -> Float
+staticeval' :: Board -> Int -> Double
 staticeval' b 64 = 0
 staticeval' b n  = (value piecec)  + (weightedposition piecec n) + (staticeval' b (n+1))
     where
         piecec = getpieceonboard b n
 
-weightedposition :: Spot -> Int -> Float
+weightedposition :: Spot -> Int -> Double
 weightedposition _ n | n < 0 || n > 63 = error ("error in weighted position")
 weightedposition (Just (Piece Pawn True))    n   =      weightedpawnwhite   !! n
 weightedposition (Just (Piece Knight True))  n   =      weightedknightwhite !! n
@@ -342,104 +318,9 @@ weightedposition (Just (Piece Queen False))  n   = -1 * weightedqueenblack  !! n
 weightedposition (Just (Piece King False))   n   = -1 * weightedkingblack   !! n
 weightedposition _ _ = 0.0
 
-weightedpawnwhite =   [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
-                       5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,
-                       1.0,1.0,2.0,3.0,3.0,2.0,1.0,1.0,
-                       0.5,0.5,0.1,2.5,2.5,1.0,0.5,0.5,
-                       0.0,0.0,0.0,2.0,2.0,0.0,0.0,0.0,
-                       0.5,-0.5,-1.0,0.0,0.0,-1.0,-0.5,0.5,
-                       0.5,1.0,1.0,-2.0,-2.0,1.0,1.0,0.5,
-                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
-weightedpawnblack =   [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
-                       0.5,1.0,1.0,-2.0,-2.0,1.0,1.0,0.5,
-                       0.5,-0.5,-1.0,0.0,0.0,-1.0,-0.5,0.5,
-                       0.0,0.0,0.0,2.0,2.0,0.0,0.0,0.0,
-                       0.5,0.5,0.1,2.5,2.5,1.0,0.5,0.5,
-                       1.0,1.0,2.0,3.0,3.0,2.0,1.0,1.0,
-                       5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,
-                       0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
-weightedknightwhite = [-5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0,
-                       -4.0,-2.0,0.0,0.0,0.0,0.0,-2.0,-4.0,
-                       -3.0,0.0,1.0,1.5,1.5,1.0,0.0,-3.0,
-                       -3.0,0.5,1.5,2.0,2.0,2.0,1.5,0.5,-3.0,
-                       -3.0,0.5,1.5,2.0,2.0,2.0,1.5,0.5,-3.0,
-                       -3.0,0.5,1.0,1.5,1.5,1.0,0.5,-3.0,
-                       -4.0,-2.0,0.0,0.5,0.5,0.0,-2.0,-4.0,
-                       -5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0]
-weightedknightblack = [-5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0
-                       -4.0,-2.0,0.0,0.5,0.5,0.0,-2.0,-4.0,
-                       -3.0,0.5,1.0,1.5,1.5,1.0,0.5,-3.0,
-                       -3.0,0.5,1.5,2.0,2.0,2.0,1.5,0.5,-3.0,
-                       -3.0,0.5,1.5,2.0,2.0,2.0,1.5,0.5,-3.0,
-                       -3.0,0.0,1.0,1.5,1.5,1.0,0.0,-3.0,
-                       -4.0,-2.0,0.0,0.0,0.0,0.0,-2.0,-4.0,
-                       -5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0]
-weightedbishopwhite = [-2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0,
-                       -1.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,
-                       -1.0,0.0,0.5,1.0,1.0,0.5,0.0,-1.0,
-                       -1.0,0.5,0.5,1.0,1.0,0.5,0.5,-1.0,
-                       -1.0,0.0,1.0,1.0,1.0,1.0,0.0,-1.0,
-                       -1.0,1.0,1.0,1.0,1.0,1.0,1.0,-1.0,
-                       -1.0,0.5,0.0,0.0,0.0,0.0,0.5,-1.0,
-                       -2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0]
-weightedbishopblack = [-2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0,
-                       -1.0,0.5,0.0,0.0,0.0,0.0,0.5,-1.0,
-                       -1.0,1.0,1.0,1.0,1.0,1.0,1.0,-1.0,
-                       -1.0,0.0,1.0,1.0,1.0,1.0,0.0,-1.0,
-                       -1.0,0.5,0.5,1.0,1.0,0.5,0.5,-1.0,
-                       -1.0,0.0,0.5,1.0,1.0,0.5,0.0,-1.0,
-                       -1.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,
-                       -2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0]
-weightedrookwhite = [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                      0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                      0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0]
-weightedrookblack = [ 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                     -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-0.5,
-                      0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5,
-                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-weightedqueenwhite = [-2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0,
-                      -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-1.0,
-                      -1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0,-1.0,
-                      -0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0,-0.5,
-                       0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0,-0.5,
-                      -1.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0,-1.0,
-                      -1.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0,-1.0,
-                      -2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0]
-weightedqueenblack = [-2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0,
-                      -1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0,-1.0,
-                      -1.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0,-1.0,
-                      -0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0,
-                      -0.5, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0,-0.5,
-                      -1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0,-1.0,
-                      -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,-1.0,
-                      -2.0,-1.0,-1.0,-0.5,-0.5,-1.0,-1.0,-2.0]
-weightedkingwhite = [-3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -2.0,-3.0,-3.0,-4.0,-4.0,-3.0,-3.0,-2.0,
-                     -1.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-1.0,
-                      2.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0,
-                      2.0, 3.0, 1.0, 0.0, 0.0, 1.0, 3.0, 2.0]
-weightedkingblack = [ 2.0, 3.0, 1.0, 0.0, 0.0, 1.0, 3.0, 2.0,
-                      2.0, 2.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0,
-                     -1.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-1.0,
-                     -2.0,-3.0,-3.0,-4.0,-4.0,-3.0,-3.0,-2.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0,
-                     -3.0,-4.0,-4.0,-5.0,-5.0,-4.0,-4.0,-3.0]
 
-value :: Spot -> Float
+
+value :: Spot -> Double
 value (Just (Piece Pawn True))       = 10.2
 value (Just (Piece Pawn False))      = -10.2
 value (Just (Piece Knight True))     = 30.5
@@ -458,32 +339,21 @@ boardtostring :: Board -> String
 boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"] ) ++ "==ABCDEFGH==" ++ "\n"
 
 
-row :: Int -> Int
-row i = quot i 8
-
-col :: Int -> Int
-col i = mod i 8
-
-
 getbotmove :: Board -> Bool -> Move
 getbotmove b t = findbestmove b t
 
-
-format :: String -> [String]
-format s = split 8 s
-
-split :: Int -> [a] -> [[a]]
-split n = takeWhile (not.null) . map (take n) . iterate (drop n)
 
 maxVal = -9876
 minVal = 9876
 maxdepth = 1
 
 findbestmove :: Board -> Bool -> Move
+findbestmove b True | null $ getmoves b True = error("no moves in findbestmove")
 findbestmove b True = snd $ maximum y
     where
         moves = getmoves b True
         y = map (\x -> (minimax (executemove b x) (getmoves b True) True maxdepth, x)) moves
+findbestmove b False | null $ getmoves b False = error("no moves in findbestmove")
 findbestmove b False = snd $ minimum y
     where
         moves = getmoves b False
@@ -491,7 +361,7 @@ findbestmove b False = snd $ minimum y
 
 
 
-minimax :: Board -> [Move] -> Bool -> Int -> Float
+minimax :: Board -> [Move] -> Bool -> Int -> Double
 minimax b m ismaxing depth | depth == 0         = staticeval b depth
 minimax b m t d | stalemate b t                 = 0.0
 minimax b m t d | checkmate b True              = maxVal - fromIntegral d
