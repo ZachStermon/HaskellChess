@@ -59,32 +59,19 @@ info = do
 playbotsetup :: IO()
 playbotsetup = do
                error <- getLine
-               putStrLn "Whats your name?"
-               name_ <- getLine
-               putStrLn "Whats your age?"
-               age_ <- getLine
                putStrLn "Select difficulty (1-10)"
-               skill_ <- getLine
-               --let player1 = Player name_ age_
-               --let skill = skill_
-               playbot initial True
+               skill <- getLine
+               putStrLn "Play white or black? (W,B)"
+               color <- getChar
+               error <- getLine
+               if color == 'w' || color == 'W'
+               then playbotw initial True
+               else playbotb initial True
 
 playsetup :: IO()
 playsetup = do
           error <- getLine
-          putStrLn "Player 1, Please Enter Your Name: "
-          player1name <- getLine
-          putStrLn "Player 1, Please Enter Your Age: "
-          player1age <- getLine
-          putStrLn "Player 2, Please Enter Your Name: "
-          player2name <- getLine
-          putStrLn "Player 2, Please Enter Your Age: "
-          player2age <- getLine
-          putStrLn $ (player1name ++ " is Player 1 and they are White.")
-          putStrLn $ (player2name ++ " is Player 2 and they are Black.")
           play initial True
-          --let player1 = Player player1name player1age
-          --let player2 = Player player2name player2age
 
 
 
@@ -92,30 +79,16 @@ playsetup = do
 play :: Board -> Bool -> IO()
 play b True = do
                 printboard b
-                putStrLn "It Is Now Whites Turn," --(" ++ player1name ++ ")"
+                putStrLn "It Is Now Whites Turn,"
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
                 movement (b) (stringtomove(move)) False
 play b False = do
                 printboard b
-                putStrLn "It Is Now Blacks Turn, " --(" ++ player2name ++ ")"
+                putStrLn "It Is Now Blacks Turn, "
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
                 movement (b) (stringtomove(move)) True
-
-playbot :: Board -> Bool -> IO()
-playbot b True = do
-                printboard b
-                if gameover b True then reset' False else do
-                      putStrLn "It Is Now Whites Turn,"
-                      putStrLn "Enter valid move (a1b2): "
-                      move <- getLine
-                      movementbot (b) (stringtomove(move))
-
-playbot b False = do
-                printboard b
-                if gameover b False then reset' True else do
-                      playbot (executemove b (getbotmove b)) True
 
 --This function tests if the move is valid and plays it if it is
 movement :: Board -> Move -> Bool -> IO()
@@ -123,11 +96,49 @@ movement b m x = if validmove b m (not x)
                  then putStrLn "Good Move" >> play (executemove b m) x
                  else putStrLn "Bad Move" >> play b (not x)
 
+playbotw :: Board -> Bool -> IO()
+playbotw b True = do
+                printboard b
+                if gameover b True then reset' False else do
+                      putStrLn "It Is Now Whites Turn,"
+                      putStrLn "Enter valid move (a1b2): "
+                      move <- getLine
+                      movementbotw b (stringtomove(move))
 
-movementbot :: Board -> Move -> IO()
-movementbot b m = if validmove b m True
-               then putStrLn "Good Move" >> playbot (executemove b m) False
-               else putStrLn "Bad Move" >> playbot b True
+playbotw b False = do
+                printboard b
+                if gameover b False then reset' True else do
+                      let m = getbotmove b False
+                      playbotw (executemove b m) True
+                      putStrLn "Bot played:"
+                      putStrLn (show m)
+
+playbotb :: Board -> Bool -> IO()
+playbotb b True = do
+                printboard b
+                if gameover b False then reset' True else do
+                      let m = getbotmove b True
+                      playbotb (executemove b m) False
+                      putStrLn "Bot played:"
+                      putStrLn (show m)
+playbotb b False = do
+                printboard b
+                if gameover b True then reset' False else do
+                      putStrLn "It Is Now Blacks Turn,"
+                      putStrLn "Enter valid move (a1b2): "
+                      move <- getLine
+                      movementbotb b (stringtomove(move))
+
+
+movementbotb :: Board -> Move -> IO()
+movementbotb b m = if validmove b m False
+               then putStrLn "Good Move" >> playbotb (executemove b m) True
+               else putStrLn "Bad Move" >> playbotb b False
+
+movementbotw :: Board -> Move -> IO()
+movementbotw b m = if validmove b m True
+               then putStrLn "Good Move" >> playbotw (executemove b m) False
+               else putStrLn "Bad Move" >> playbotw b True
 
 reset' :: Bool -> IO()
 reset' True  = do
