@@ -148,14 +148,8 @@ reset' False = do
                 putStrLn "Black wins! Click (Enter) to start a new game"
                 start
 
-gameover :: Board -> Bool -> Bool
-gameover b t = (checkmate b t) || (stalemate b t)
 
 --prints a board to stdout
 printboard :: Board -> IO()
 printboard b = do
-               putStrLn ""
-               putStrLn "==ABCDEFGH=="
-               putStr $ unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"]
-               putStrLn "==ABCDEFGH=="
-               putStrLn ""
+                putStrLn (boardtostring b)

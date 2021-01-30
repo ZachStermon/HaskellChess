@@ -1,23 +1,31 @@
 module Chess
-( showpiece , getpiece
-, showspot
-, getboard , showboard
-, setspotonboard , getpieceonboard
-, executemove , validmove
-, format , split, getbotmove
-, initial , stringtomove,  getmoves
-, Type , Piece , Spot , Board , Move
-, checkmate , stalemate
+( executemove
+, Board
+, Move
+, gameover
+, validmove
+, stringtomove
+, boardtostring
+, getbotmove
+, initial
 ) where
 
-import Weights
 import Helpers
+import Weights
 
+--declarations
 data Type = Pawn | Knight | Bishop | Rook | Queen | King deriving (Show, Eq)
 data Piece = Piece Type Bool deriving (Show, Eq)
 type Spot = Maybe Piece
 type Board = [Spot]
-type Move = (Int, Int)
+type Move = (Position, Position)
+type Position = Int
+type Side = Bool
+
+maxdepth = 1
+maxmatedepth = 3
+maxval = -9876
+minval = 9876
 
 staleboard =     getboard ("kr--------r-----------------------------r-------P-------K-------")
 checkmateboard = getboard ("----k------------------------------q---------------PPb-----QKB--")
@@ -27,22 +35,6 @@ mateintwo =      getboard (empty ++ "-Q------" ++ empty ++ "k-------" ++ empty +
 initial =        getboard ("rnbqkbnr" ++ "pppppppp" ++ empty ++ empty ++ empty ++ empty ++ "PPPPPPPP" ++ "RNBQKBNR")
 empty = "--------"
 
-{-
-DONE
-TODO
-  **Random bot?**
-POSSIBLE TODO
-ITS A REACH
-  minimax
-  AB pruning
-CASTLING
-  True
-  king must be on 60
-  rook must be on 63 or 56
-  no pieces in the way
-  can not move into check or move through check
-  (technically cant have moves rooks or king)
--}
 
 {-
 board representation is a single vector:
@@ -57,123 +49,126 @@ board representation is a single vector:
     A  B  C  D  E  F  G  H
 -}
 
-showpiece :: Piece -> Char
-showpiece (Piece Pawn True)    = 'P'
-showpiece (Piece Knight True)  = 'N'
-showpiece (Piece Bishop True)  = 'B'
-showpiece (Piece Rook True)    = 'R'
-showpiece (Piece Queen True)   = 'Q'
-showpiece (Piece King True)    = 'K'
-showpiece (Piece Pawn False)   = 'p'
-showpiece (Piece Knight False) = 'n'
-showpiece (Piece Bishop False) = 'b'
-showpiece (Piece Rook False)   = 'r'
-showpiece (Piece Queen False)  = 'q'
-showpiece (Piece King False)   = 'k'
-
-getpiece :: Char -> Maybe Piece
-getpiece 'P' = Just (Piece Pawn True)
-getpiece 'N' = Just (Piece Knight True)
-getpiece 'B' = Just (Piece Bishop True)
-getpiece 'R' = Just (Piece Rook True)
-getpiece 'Q' = Just (Piece Queen True)
-getpiece 'K' = Just (Piece King True)
-getpiece 'p' = Just (Piece Pawn False)
-getpiece 'n' = Just (Piece Knight False)
-getpiece 'b' = Just (Piece Bishop False)
-getpiece 'r' = Just (Piece Rook False)
-getpiece 'q' = Just (Piece Queen False)
-getpiece 'k' = Just (Piece King False)
-getpiece  _  = Nothing
-
-
-
-
---input will look like a2c6
-stringtomove :: String -> Move
-stringtomove s | length s /= 4 = error ("error in stm: " ++ s)
-stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
-
 showspot :: Spot -> Char
-showspot Nothing = '-'
-showspot (Just piece) = showpiece piece
+showspot (Just (Piece Pawn True))    = 'P'
+showspot (Just (Piece Knight True))  = 'N'
+showspot (Just (Piece Bishop True))  = 'B'
+showspot (Just (Piece Rook True))    = 'R'
+showspot (Just (Piece Queen True))   = 'Q'
+showspot (Just (Piece King True))    = 'K'
+showspot (Just (Piece Pawn False))   = 'p'
+showspot (Just (Piece Knight False)) = 'n'
+showspot (Just (Piece Bishop False)) = 'b'
+showspot (Just (Piece Rook False))   = 'r'
+showspot (Just (Piece Queen False))  = 'q'
+showspot (Just (Piece King False))   = 'k'
+showspot _                           = '-'
+
+getspot :: Char -> Spot
+getspot 'P' = Just (Piece Pawn True)
+getspot 'N' = Just (Piece Knight True)
+getspot 'B' = Just (Piece Bishop True)
+getspot 'R' = Just (Piece Rook True)
+getspot 'Q' = Just (Piece Queen True)
+getspot 'K' = Just (Piece King True)
+getspot 'p' = Just (Piece Pawn False)
+getspot 'n' = Just (Piece Knight False)
+getspot 'b' = Just (Piece Bishop False)
+getspot 'r' = Just (Piece Rook False)
+getspot 'q' = Just (Piece Queen False)
+getspot 'k' = Just (Piece King False)
+getspot  _  = Nothing
+
 
 getboard :: String -> Board
-getboard string = map getpiece string
+getboard string = map getspot string
 
 showboard :: Board -> String
 showboard b = map showspot b
 
-setspotonboard :: Board -> Spot -> Int -> Board
+setspotonboard :: Board -> Spot -> Position -> Board
 setspotonboard (x:xs) a num
   | num == 0 = a:xs
   | otherwise = x:setspotonboard xs a (num-1)
 
-getpieceonboard :: Board -> Int -> Spot
-getpieceonboard (xs) i | i < 0 || i > 63 = error ("Out of bounds, getpieceonboard")
-getpieceonboard (xs) i = xs !! i
-
 executemove :: Board -> Move -> Board
-executemove b (o,d) = setspotonboard (setspotonboard b (getpieceonboard b o) d) (getpiece '-') o
+executemove b (o,d) = setspotonboard (setspotonboard b (b!!o) d) Nothing o
+
+getcolor :: Spot -> Bool
+getcolor (Just (Piece _ t)) = t
+getcolor _  = undefined
+
+
+boardtostring :: Board -> String
+boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"] ) ++ "==ABCDEFGH==" ++ "\n"
+
+
+
+--input will look like "a2c6"
+stringtomove :: String -> Move
+stringtomove s | length s /= 4 = error ("error in stm: " ++ s)
+stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
+
+
+
+
 
 inrange :: Move -> Bool
 inrange (o,d) = (o >= 0 && o <= 63) && (d >= 0 && d <= 63)
 
-exists :: Board -> Int -> Bool
+exists :: Board -> Position -> Bool
 exists b i | i < 0 || i > 63 = error ("Out of bounds, exists function")
-exists b i = (showspot (b !! i) /= '-')
+exists b i = (b !! i) /= Nothing
 
 notfriendlyfire :: Board -> Move -> Bool
-notfriendlyfire b (o,d) = ((getcolor (getpieceonboard b o)) /= (getcolor (getpieceonboard b d)))
+notfriendlyfire b (o,d) = (getcolor $ b!!o) /= (getcolor $ b!!d)
 
-correctturn :: Board -> Int -> Bool -> Bool
+correctturn :: Board -> Int -> Side -> Bool
 correctturn b i _ | (i < 0 || i > 63) = error ("Out of bounds, correct turn")
-correctturn b i True  = getcolor (b !! i) == True
-correctturn b i False = getcolor (b !! i) == False
+correctturn b i t  = getcolor (b!!i) == t
 
-getcolor :: Spot -> Bool
-getcolor (Just (Piece _ False)) = False
-getcolor (Just (Piece _ True))  = True
-getcolor _  = undefined
 
-isenemy :: Board -> Int -> Bool -> Bool
+
+isenemy :: Board -> Position -> Side -> Bool
 isenemy b i t | i < 0 || i > 63 = error ("Out of bounds, isenemy function")
-isenemy b i t = (exists b i) && ((getcolor (b !! i)) /= t)
+isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
 
 --this function will handle moving a piece after it has been cleared
 --this will help with castling, en passant, and promotion
+--TODO
 premove :: Board -> Move -> Board
 premove b (o,d) = b
 
-getmoves :: Board -> Bool -> [Move]
+getmoves :: Board -> Side -> [Move]
 getmoves b t = getmoves' b t 0 0
 
-getmoves' :: Board -> Bool -> Int -> Int -> [Move]
+getmoves' :: Board -> Side -> Position -> Position -> [Move]
 getmoves' b t 63 63 = []
-getmoves' b t i1 63 = if (validmove b (i1,63) t) then (i1,63):(getmoves' b t (i1 + 1) 0)  else (getmoves' b t (i1 + 1) 0)
-getmoves' b t i1 i2 = if (validmove b (i1,i2) t) then (i1,i2):(getmoves' b t i1 (i2 + 1)) else (getmoves' b t i1 (i2 + 1))
+getmoves' b t i1 63 = if validmove b (i1,63) t then (i1,63):(getmoves' b t (i1 + 1) 0)  else getmoves' b t (i1 + 1) 0
+getmoves' b t i1 i2 = if validmove b (i1,i2) t then (i1,i2):(getmoves' b t i1 (i2 + 1)) else getmoves' b t i1 (i2 + 1)
 
-validmove :: Board -> Move -> Bool -> Bool
-validmove b (o,d) t = validmove'' b (o,d) t && (notcheckmove b (o,d) t)
+validmove :: Board -> Move -> Side -> Bool
+validmove b (o,d) t = validmove'' b (o,d) t && notcheckmove b (o,d) t
 
-validmove'' :: Board -> Move -> Bool -> Bool
+validmove'' :: Board -> Move -> Side -> Bool
 validmove'' b (o,d) t = (inrange (o,d))
                    && o /= d
-                   && (exists b o)
-                   && (correctturn b o t)
+                   && exists b o
+                   && correctturn b o t
                    && (if (exists b d) then (notfriendlyfire b (o,d)) else True)
-                   && (validmove' b (o,d) (getpieceonboard b o))
+                   && validmove' b (o,d) (showspot $ b!!o)
 
-validmove' :: Board -> Move -> Spot -> Bool
-validmove' b m (Just (Piece Pawn True))    = pmovementw b m
-validmove' b m (Just (Piece Pawn False))   = pmovementb b m
-validmove' b m (Just (Piece Knight _))     = nmovement m
-validmove' b m (Just (Piece Bishop _))     = (bmovement m) && (notblocked b m False)
-validmove' b m (Just (Piece Rook _))       = (rmovement m) && (notblocked b m True)
-validmove' b m (Just (Piece Queen _))      = ((rmovement m) && (notblocked b m True)) || ((bmovement m) && (notblocked b m False))
-validmove' b m (Just (Piece King True))    = kmovement m || whitecastle b m
-validmove' b m (Just (Piece King False))   = kmovement m || blackcastle b m
-validmove' _ _ _                           = False
+--TODO
+validmove' :: Board -> Move -> Char -> Bool
+validmove' b m ('P')                    = pmovementw b m
+validmove' b m ('p')                    = pmovementb b m
+validmove' b m p | p == 'N' || p == 'n' = nmovement m
+validmove' b m p | p == 'B' || p == 'b' = bmovement m && notblocked b m False
+validmove' b m p | p == 'R' || p == 'r' = rmovement m && notblocked b m True
+validmove' b m p | p == 'Q' || p == 'q' = (rmovement m && notblocked b m True) || (bmovement m && notblocked b m False)
+validmove' b m ('K')                    = kmovement m -- || whitecastle b m
+validmove' b m ('k')                    = kmovement m -- || blackcastle b m
+validmove' _ _ _                        = False
 
 whitecastle :: Board -> Move -> Bool
 whitecastle b (60, 62) = not (exists b 61) && not (exists b 62)
@@ -279,20 +274,33 @@ findpiece' :: Board -> Spot -> Int -> Int
 findpiece' b p n | n < 0 || n > 63 = -1
 findpiece' b p n = if (b !! n == p) then n else findpiece' b p (n+1)
 
+gameover :: Board -> Bool -> Bool
+gameover b t = (checkmate b t) || (stalemate b t)
+
+
+
+
 existskings :: Board -> Bool
-existskings b = (findpiece b (Just (Piece King True)) /= -1) && (findpiece b (Just (Piece King False)) /= -1)
+existskings b = (findpiece b (getspot 'K') /= -1) && (findpiece b (getspot 'k') /= -1)
 
 incheck :: Board -> Bool -> Bool
-incheck b True  = attacked b (findpiece b (Just(Piece King True))) True
-incheck b False = attacked b (findpiece b (Just(Piece King False))) False
+incheck b True  = attacked b (findpiece b (getspot 'K')) True
+incheck b False = attacked b (findpiece b (getspot 'k')) False
 
 notcheckmove :: Board -> Move -> Bool -> Bool
 notcheckmove b (o,d) t | d < 0 || d > 63 = error ("error in notcheckmove" ++ boardtostring b)
-notcheckmove b (o,d) t = not (incheck (executemove b (o,d)) t) && b!!d /= (Just (Piece King True)) && b!!d /= (Just (Piece King False)) && existskings b
+notcheckmove b (o,d) t = not (incheck (executemove b (o,d)) t) && b!!d /= (getspot 'K') && b!!d /= (getspot 'k') && existskings b
+
+
+
+
+
+
+
 
 staticeval :: Board -> Int -> Double
-staticeval b d | checkmate b False = minVal + fromIntegral d
-staticeval b d | checkmate b True  = maxVal - fromIntegral d
+staticeval b d | checkmate b False = minval + fromIntegral d
+staticeval b d | checkmate b True  = maxval - fromIntegral d
 staticeval b d | stalemate b True || stalemate b False  = 0.0
 staticeval b d = staticeval' b 0
 
@@ -300,7 +308,7 @@ staticeval' :: Board -> Int -> Double
 staticeval' b 64 = 0
 staticeval' b n  = (value piecec)  + (weightedposition piecec n) + (staticeval' b (n+1))
     where
-        piecec = getpieceonboard b n
+        piecec = b!!n
 
 weightedposition :: Spot -> Int -> Double
 weightedposition _ n | n < 0 || n > 63 = error ("error in weighted position")
@@ -322,12 +330,12 @@ weightedposition _ _ = 0.0
 
 value :: Spot -> Double
 value (Just (Piece Pawn True))       = 10.2
-value (Just (Piece Pawn False))      = -10.2
 value (Just (Piece Knight True))     = 30.5
 value (Just (Piece Bishop True))     = 33.3
 value (Just (Piece Rook True))       = 56.3
 value (Just (Piece Queen True))      = 95.1
 value (Just (Piece King True))       = 999.9
+value (Just (Piece Pawn False))      = -10.2
 value (Just (Piece Knight False))    = -30.5
 value (Just (Piece Bishop False))    = -33.3
 value (Just (Piece Rook False))      = -56.3
@@ -335,17 +343,23 @@ value (Just (Piece Queen False))     = -95.1
 value (Just (Piece King False))      = -999.9
 value _                              = 0
 
-boardtostring :: Board -> String
-boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"] ) ++ "==ABCDEFGH==" ++ "\n"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 getbotmove :: Board -> Bool -> Move
 getbotmove b t = findbestmove b t
 
-
-maxVal = -9876
-minVal = 9876
-maxdepth = 1
 
 findbestmove :: Board -> Bool -> Move
 findbestmove b True | null $ getmoves b True = error("no moves in findbestmove")
@@ -361,15 +375,31 @@ findbestmove b False = snd $ minimum y
 
 
 
-minimax :: Board -> [Move] -> Bool -> Int -> Double
+minimax :: Board -> [Move] -> Side -> Int -> Double
 minimax b m ismaxing depth | depth == 0         = staticeval b depth
 minimax b m t d | stalemate b t                 = 0.0
-minimax b m t d | checkmate b True              = maxVal - fromIntegral d
-minimax b m t d | checkmate b False             = minVal + fromIntegral d
+minimax b m t d | checkmate b True              = maxval - fromIntegral d
+minimax b m t d | checkmate b False             = minval + fromIntegral d
 minimax b [] _    depth                         = staticeval b depth
-minimax b m True  depth | length m == 1         = (minimax (executemove b (head m)) (getmoves b False) False (depth-1))
-minimax b m False depth | length m == 1         = (minimax (executemove b (head m)) (getmoves b True)  True  (depth-1))
-minimax b (x:xs) True  depth                    = if (nextnode > 100) then nextnode else max nextnode (minimax b xs True  depth)
-            where nextnode = (minimax (executemove b x) (getmoves b False) False (depth-1))
-minimax b (x:xs) False depth                    = if (nextnode < 100) then nextnode else min nextnode (minimax b xs False depth)
-            where nextnode = (minimax (executemove b x) (getmoves b True)  True  (depth-1))
+minimax b m True  depth | length m == 1         = minimax (executemove b (head m)) (getmoves b False) False (depth-1)
+minimax b m False depth | length m == 1         = minimax (executemove b (head m)) (getmoves b True)  True  (depth-1)
+minimax b (x:xs) True  depth                    = max nextnode (minimax b xs True  depth)
+            where nextnode = minimax (executemove b x) (getmoves b False) False (depth-1)
+minimax b (x:xs) False depth                    = min nextnode (minimax b xs False depth)
+            where nextnode = minimax (executemove b x) (getmoves b True)  True  (depth-1)
+
+
+
+findmate :: Board -> [Move] -> Side -> Maybe Move
+findmate b [] t                    = Nothing
+findmate b m True  | length m == 1 = if (findmateboo b (getmoves b True) True  True  maxmatedepth) then Just (head m) else Nothing
+findmate b m False | length m == 1 = if (findmateboo b (getmoves b False) False False maxmatedepth) then Just (head m) else Nothing
+findmate b (x:xs) True  = if findmateboo b (getmoves b True)  True  True  maxmatedepth then Just x else findmate b xs False
+findmate b (x:xs) False = if findmateboo b (getmoves b False) False False maxmatedepth then Just x else findmate b xs False
+
+findmateboo :: Board -> [Move] -> Side -> Bool -> Int -> Bool
+findmateboo b m t alt 0                     = checkmate b (not t)
+findmateboo b m True  alt d | length m == 1 = if checkmate b False then True else findmateboo (executemove b (head m)) (getmoves b alt) True  (not alt) (d-1)
+findmateboo b m False alt d | length m == 1 = if checkmate b True  then True else findmateboo (executemove b (head m)) (getmoves b alt) False (not alt) (d-1)
+findmateboo b (m:ms) True  alt d            = if checkmate b False then True else findmateboo b ms True  True  d || findmateboo (executemove b m) (getmoves b alt) True  (not alt) (d-1)
+findmateboo b (m:ms) False alt d            = if checkmate b True  then True else findmateboo b ms False False d || findmateboo (executemove b m) (getmoves b alt) False (not alt) (d-1)
