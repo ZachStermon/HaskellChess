@@ -19,15 +19,31 @@ data Type = Pawn | Knight | Bishop | Rook | Queen | King deriving (Show, Eq)
 data Piece = Piece Type Bool deriving (Show, Eq)
 type Spot = Maybe Piece
 type Board = [Spot]
-type Move = (Position, Position)
+type Move  = (Position, Position)
+type Moves = [Move]
 type Position = Int
 type Side = Bool
+type Turn = Bool
 
-maxdepth = 0
+maxdepth = 1
 maxmatedepth = 3
 maxval = -9876
 minval = 9876
+b = mateintwov2
+state = makestate b False
 
+-- "global vairables record"
+data State = State { turn :: Bool,
+                     board :: Board,
+                     history :: [Move],
+                     blackcanlongcastle :: Bool,
+                     blackcanshortcastle :: Bool,
+                     whitecanlongcastle :: Bool,
+                     whitecanshortcastle :: Bool,
+                     capturedpieces :: [Piece]
+                    } deriving (Show, Eq)
+
+-- Board States
 staleboard =     getboard ("kr--------r-----------------------------r-------P-------K-------")
 checkmateboard = getboard ("----k------------------------------q---------------PPb-----QKB--")
 testboard =      getboard ("rnbqkb-rppp---pp-----------nNp-Q--B-------------PPPP-PPPRNB-K--R")
@@ -51,6 +67,7 @@ board representation is a single vector:
     A  B  C  D  E  F  G  H
 -}
 
+--
 showspot :: Spot -> Char
 showspot (Just (Piece Pawn True))    = 'P'
 showspot (Just (Piece Knight True))  = 'N'
@@ -102,6 +119,82 @@ getcolor (Just (Piece _ t)) = t
 getcolor _  = undefined
 
 
+getpawnmoves :: State -> Position -> [Position]
+getpawnmoves (State {board = b, turn = False}) p =
+  let m1 = if null (b !! (p + 8)) then [p+8] else []
+      m2 = if row p == 1 && not (null m1) && null (b !! (p + 16)) then (p+16):m1 else m1
+      m3 = if (isenemy b (p+7) False) then (p+7):m2 else m2
+      m4 = if (isenemy b (p+9) False) then (p+9):m3 else m3
+  in m4
+getpawnmoves (State {board = b, turn = True}) p =
+  let m1 = if null (b !! (p-8)) then [p-8] else []
+      m2 = if row p == 6 && not (null m1) && null (b !! (p-16)) then (p-16):m1 else m1
+      m3 = if (isenemy b (p-7) True) then (p-7):m2 else m2
+      m4 = if (isenemy b (p-9) True) then (p-9):m3 else m3
+  in m4
+
+
+getrookmoves :: State -> Position -> [Position]
+getrookmoves (State {board = b, turn = t}) p =
+  let checkup acc pos    | pos < 0              = acc
+                         | isenemy b pos t      = pos:acc
+                         | null (b!!pos)        = checkup (pos:acc) (pos-8)
+                         | otherwise            = acc
+      checkdown acc pos  | pos > 63             = acc
+                         | isenemy b pos t      = pos:acc
+                         | null (b!!pos)        = checkdown (pos:acc) (pos+8)
+                         | otherwise            = acc
+      checkleft acc pos  | (pos `mod` 8) == 7   = acc
+                         | isenemy b pos t      = pos:acc
+                         | null (b!!pos)        = checkleft (pos:acc) (pos-1)
+                         | otherwise            = acc
+      checkright acc pos | (pos `mod` 8) == 0   = acc
+                         | isenemy b pos t      = pos:acc
+                         | null (b!!pos)        = checkright (pos:acc) (pos+1)
+                         | otherwise            = acc
+  in checkup [] (p-8) ++ checkdown [] (p+8) ++ checkleft [] (p-1) ++ checkright [] (p+1)
+
+--finish getmoves
+--email Dr. Polonksy with results
+--Switch to SEQ
+
+
+
+-- t = False
+-- checkup acc pos          | pos < 0              = acc
+--                          | isenemy b pos t      = pos:acc
+--                          | null (b!!pos)        = checkup (pos:acc) (pos-8)
+--                          | otherwise            = acc
+-- checkdown acc pos        | pos > 63             = acc
+--                          | isenemy b pos t      = pos:acc
+--                          | null (b!!pos)        = checkup (pos:acc) (pos+8)
+--                          | otherwise            = acc
+-- checkleft acc pos        | (pos `mod` 8) == 7   = acc
+--                          | isenemy b pos t      = pos:acc
+--                          | null (b!!pos)        = checkup (pos:acc) (pos-1)
+--                          | otherwise            = acc
+-- checkright acc pos       | (pos `mod` 8) == 0   = acc
+--                          | isenemy b pos t      = pos:acc
+--                          | null (b!!pos)        = checkup (pos:acc) (pos+1)
+--                          | otherwise            = acc
+
+
+makestate :: Board -> Turn -> State
+makestate b t = State {
+  board = b,
+  turn = t,
+  history = [],
+  blackcanlongcastle = True,
+  blackcanshortcastle = True,
+  whitecanlongcastle = True,
+  whitecanshortcastle = True,
+  capturedpieces = [] }
+
+
+
+
+
+
 boardtostring :: Board -> String
 boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"] ) ++ "==ABCDEFGH==" ++ "\n"
 
@@ -151,6 +244,7 @@ docastle b (60, 62) = executemove (executemove b (63,61)) (60, 62)
 docastle b (4,6)    = executemove (executemove b (7,5)) (4,6)
 docastle b (4,2)    = executemove (executemove b (0,3)) (4,2)
 
+--add function that gives list of moves for specific piece
 getmoves :: Board -> Side -> [Move]
 getmoves b t = getmovesr b t 0 0
 
