@@ -6,8 +6,9 @@ module Chess
 , validmove
 , stringtomove
 , boardtostring
-, getbotmove
+, findbestmove
 , initial
+, premove
 ) where
 
 import Helpers
@@ -22,7 +23,7 @@ type Move = (Position, Position)
 type Position = Int
 type Side = Bool
 
-maxdepth = 1
+maxdepth = 0
 maxmatedepth = 3
 maxval = -9876
 minval = 9876
@@ -30,11 +31,12 @@ minval = 9876
 staleboard =     getboard ("kr--------r-----------------------------r-------P-------K-------")
 checkmateboard = getboard ("----k------------------------------q---------------PPb-----QKB--")
 testboard =      getboard ("rnbqkb-rppp---pp-----------nNp-Q--B-------------PPPP-PPPRNB-K--R")
-mateinthree =    getboard (empty ++ empty ++ "-Q------" ++ "-K------" ++ empty ++ "k-------" ++ empty ++ empty)
-mateintwo =      getboard (empty ++ "-Q------" ++ empty ++ "k-------" ++ empty ++ "--K-----" ++ empty ++ empty)
+mateinthree =    getboard ("---------------kp------p----B-p----P-pQ--------PP-----PK-----q--")
+mateinthreev2 =  getboard ("---rk--rp----pppb-p-------b-----Nq--PPn--P------P-P-N-PPR-B-QK-R") --best moves are as follows: (b4e1 (33,60)),(e1f1 (60,61)),(d8d1 (3,59))
+mateintwo =      getboard ("---------Q--------------k-----------------K---------------------")
+mateintwov2 =    getboard ("------k------ppp----b---p-q----------K------P---r-----PP---Q---R") --best moves are as follows: (c5f5 (26,29)),(f5f2 (29,53))
 initial =        getboard ("rnbqkbnr" ++ "pppppppp" ++ empty ++ empty ++ empty ++ empty ++ "PPPPPPPP" ++ "RNBQKBNR")
 empty = "--------"
-
 
 {-
 board representation is a single vector:
@@ -86,6 +88,7 @@ getboard string = map getspot string
 showboard :: Board -> String
 showboard b = map showspot b
 
+
 setspotonboard :: Board -> Spot -> Position -> Board
 setspotonboard (x:xs) a num
   | num == 0 = a:xs
@@ -103,14 +106,10 @@ boardtostring :: Board -> String
 boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipWith (++) ["8 ","7 ","6 ","5 ","4 ","3 ","2 ","1 "] (format $ (showboard b))) [" 8"," 7"," 6"," 5"," 4"," 3"," 2"," 1"] ) ++ "==ABCDEFGH==" ++ "\n"
 
 
-
 --input will look like "a2c6"
 stringtomove :: String -> Move
 stringtomove s | length s /= 4 = error ("error in stm: " ++ s)
 stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
-
-
-
 
 
 inrange :: Move -> Bool
@@ -134,18 +133,39 @@ isenemy b i t | i < 0 || i > 63 = error ("Out of bounds, isenemy function")
 isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
 
 --this function will handle moving a piece after it has been cleared
---this will help with castling, en passant, and promotion
+--this will help with castling, en passant, and promote
 --TODO
 premove :: Board -> Move -> Board
-premove b (o,d) = b
+premove b (o,d) | b!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote b (o,d) True  else executemove b (o,d)
+premove b (o,d) | b!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote b (o,d) False else executemove b (o,d)
+premove b (o,d) | o == 60 || o == 4                 = if (whitecastle b (o,d) || blackcastle b (o,d)) then docastle b (o,d) else executemove b (o,d)
+premove b m                                         = executemove b m
+
+promote :: Board -> Move -> Side -> Board
+promote b (o,d) t = setspotonboard (setspotonboard b Nothing o) (Just (Piece Queen t)) d
+
+
+docastle :: Board -> Move -> Board
+docastle b (60, 58) = executemove (executemove b (56,59)) (60, 58)
+docastle b (60, 62) = executemove (executemove b (63,61)) (60, 62)
+docastle b (4,6)    = executemove (executemove b (7,5)) (4,6)
+docastle b (4,2)    = executemove (executemove b (0,3)) (4,2)
 
 getmoves :: Board -> Side -> [Move]
-getmoves b t = getmoves' b t 0 0
+getmoves b t = getmovesr b t 0 0
 
-getmoves' :: Board -> Side -> Position -> Position -> [Move]
-getmoves' b t 63 63 = []
-getmoves' b t i1 63 = if validmove b (i1,63) t then (i1,63):(getmoves' b t (i1 + 1) 0)  else getmoves' b t (i1 + 1) 0
-getmoves' b t i1 i2 = if validmove b (i1,i2) t then (i1,i2):(getmoves' b t i1 (i2 + 1)) else getmoves' b t i1 (i2 + 1)
+getmovesr :: Board -> Side -> Position -> Position -> [Move]
+getmovesr b t 63 63 = []
+getmovesr b t i1 63 = if validmove b (i1,63) t then (i1,63):(getmovesr b t (i1 + 1) 0)  else getmovesr b t (i1 + 1) 0
+getmovesr b t i1 i2 = if validmove b (i1,i2) t then (i1,i2):(getmovesr b t i1 (i2 + 1)) else getmovesr b t i1 (i2 + 1)
+
+getmoves' :: Board -> Side -> [Move]
+getmoves' b t = getmovesr' b t 0 0
+
+getmovesr' :: Board -> Side -> Position -> Position -> [Move]
+getmovesr' b t 63 63 = []
+getmovesr' b t i1 63 = if validmove'' b (i1,63) t then (i1,63):(getmovesr' b t (i1 + 1) 0)  else getmovesr' b t (i1 + 1) 0
+getmovesr' b t i1 i2 = if validmove'' b (i1,i2) t then (i1,i2):(getmovesr' b t i1 (i2 + 1)) else getmovesr' b t i1 (i2 + 1)
 
 validmove :: Board -> Move -> Side -> Bool
 validmove b (o,d) t = validmove'' b (o,d) t && notcheckmove b (o,d) t
@@ -156,19 +176,19 @@ validmove'' b (o,d) t = (inrange (o,d))
                    && exists b o
                    && correctturn b o t
                    && (if (exists b d) then (notfriendlyfire b (o,d)) else True)
-                   && validmove' b (o,d) (showspot $ b!!o)
+                   && validmove' b (o,d) (b!!o)
 
 --TODO
-validmove' :: Board -> Move -> Char -> Bool
-validmove' b m ('P')                    = pmovementw b m
-validmove' b m ('p')                    = pmovementb b m
-validmove' b m p | p == 'N' || p == 'n' = nmovement m
-validmove' b m p | p == 'B' || p == 'b' = bmovement m && notblocked b m False
-validmove' b m p | p == 'R' || p == 'r' = rmovement m && notblocked b m True
-validmove' b m p | p == 'Q' || p == 'q' = (rmovement m && notblocked b m True) || (bmovement m && notblocked b m False)
-validmove' b m ('K')                    = kmovement m -- || whitecastle b m
-validmove' b m ('k')                    = kmovement m -- || blackcastle b m
-validmove' _ _ _                        = False
+validmove' :: Board -> Move -> Spot -> Bool
+validmove' b m (Just (Piece Pawn True))  = pmovementw b m
+validmove' b m (Just (Piece Pawn False)) = pmovementb b m
+validmove' b m (Just (Piece Knight _))   = nmovement m
+validmove' b m (Just (Piece Bishop _))   = bmovement m && notblocked b m False
+validmove' b m (Just (Piece Rook _))     = rmovement m && notblocked b m True
+validmove' b m (Just (Piece Queen _))    = (rmovement m && notblocked b m True) || (bmovement m && notblocked b m False)
+validmove' b m (Just (Piece King True))  = kmovement m || whitecastle b m
+validmove' b m (Just (Piece King False)) = kmovement m || blackcastle b m
+validmove' _ _ _                         = False
 
 whitecastle :: Board -> Move -> Bool
 whitecastle b (60, 62) = not (exists b 61) && not (exists b 62)
@@ -177,7 +197,7 @@ whitecastle b _        = False
 
 blackcastle :: Board -> Move -> Bool
 blackcastle b (4, 6) = not (exists b 5) && not (exists b 6)
-blackcastle b (4, 1) = not (exists b 1) && not (exists b 2) && not (exists b 3)
+blackcastle b (4, 2) = not (exists b 1) && not (exists b 2) && not (exists b 3)
 blackcastle b _      = False
 
 pmovementw :: Board -> Move -> Bool
@@ -229,7 +249,7 @@ rookright :: Board -> Move -> Bool
 rookright b (o,d) = if ((not (inrange (o + 1,d))) || (exists b (o + 1) && (o + 1 /= d))) then False else (if (o + 1 == d) then True else rookright b (o + 1, d))
 
 
-
+--All of the movement functions and helpers pertaining to the Bishop
 bishopleft :: Board -> Move -> Bool
 bishopleft b (o,d) = if (o < d) then downright b (o,d) else upleft b (o,d)
 
@@ -279,9 +299,9 @@ gameover b t = (checkmate b t) || (stalemate b t)
 
 
 
-
+-- ?? TODO?
 existskings :: Board -> Bool
-existskings b = (findpiece b (getspot 'K') /= -1) && (findpiece b (getspot 'k') /= -1)
+existskings b = (findpiece b (Just (Piece King False)) /= -1) && (findpiece b (Just (Piece King True)) /= -1)
 
 incheck :: Board -> Bool -> Bool
 incheck b True  = attacked b (findpiece b (getspot 'K')) True
@@ -306,9 +326,7 @@ staticeval b d = staticeval' b 0
 
 staticeval' :: Board -> Int -> Double
 staticeval' b 64 = 0
-staticeval' b n  = (value piecec)  + (weightedposition piecec n) + (staticeval' b (n+1))
-    where
-        piecec = b!!n
+staticeval' b n  = if (exists b n) then (value $ b!!n)  + (weightedposition (b!!n) n) + (staticeval' b (n+1)) else (staticeval' b (n+1))
 
 weightedposition :: Spot -> Int -> Double
 weightedposition _ n | n < 0 || n > 63 = error ("error in weighted position")
@@ -324,9 +342,7 @@ weightedposition (Just (Piece Bishop False)) n   = -1 * weightedbishopblack !! n
 weightedposition (Just (Piece Rook False))   n   = -1 * weightedrookblack   !! n
 weightedposition (Just (Piece Queen False))  n   = -1 * weightedqueenblack  !! n
 weightedposition (Just (Piece King False))   n   = -1 * weightedkingblack   !! n
-weightedposition _ _ = 0.0
-
-
+weightedposition _ _                             = 0.0
 
 value :: Spot -> Double
 value (Just (Piece Pawn True))       = 10.2
@@ -334,26 +350,14 @@ value (Just (Piece Knight True))     = 30.5
 value (Just (Piece Bishop True))     = 33.3
 value (Just (Piece Rook True))       = 56.3
 value (Just (Piece Queen True))      = 95.1
-value (Just (Piece King True))       = 999.9
+value (Just (Piece King True))       = 9999.9
 value (Just (Piece Pawn False))      = -10.2
 value (Just (Piece Knight False))    = -30.5
 value (Just (Piece Bishop False))    = -33.3
 value (Just (Piece Rook False))      = -56.3
 value (Just (Piece Queen False))     = -95.1
-value (Just (Piece King False))      = -999.9
+value (Just (Piece King False))      = -9999.9
 value _                              = 0
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -376,26 +380,27 @@ findbestmove b False = snd $ minimum y
 
 
 minimax :: Board -> [Move] -> Side -> Int -> Double
-minimax b m ismaxing depth | depth == 0         = staticeval b depth
-minimax b m t d | stalemate b t                 = 0.0
-minimax b m t d | checkmate b True              = maxval - fromIntegral d
-minimax b m t d | checkmate b False             = minval + fromIntegral d
-minimax b [] _    depth                         = staticeval b depth
-minimax b m True  depth | length m == 1         = minimax (executemove b (head m)) (getmoves b False) False (depth-1)
-minimax b m False depth | length m == 1         = minimax (executemove b (head m)) (getmoves b True)  True  (depth-1)
-minimax b (x:xs) True  depth                    = max nextnode (minimax b xs True  depth)
-            where nextnode = minimax (executemove b x) (getmoves b False) False (depth-1)
-minimax b (x:xs) False depth                    = min nextnode (minimax b xs False depth)
-            where nextnode = minimax (executemove b x) (getmoves b True)  True  (depth-1)
+minimax b m True depth |  score < -999                   = score - fromIntegral depth
+            where score = staticeval b depth
+minimax b m False depth | score > 999                    = score + fromIntegral depth
+            where score = staticeval b depth
+minimax b m ismaxing 0                                   = staticeval b 0
+minimax b [] _ depth                                     = staticeval b depth
+minimax b m t  depth | length m == 1                     = minimax (executemove b (head m)) (getmoves' b t) (not t) (depth-1)
+minimax b (x:xs) True  depth                             = max (minimax b xs True depth) nextnode
+            where nextnode = minimax (executemove b x) (getmoves' b False) False (depth-1)
+minimax b (x:xs) False depth                             = min (minimax b xs False depth) nextnode
+            where nextnode = minimax (executemove b x) (getmoves' b True)  True (depth-1)
 
 
 
+--finds if a checkmate exists. (no forced checkmates)
 findmate :: Board -> [Move] -> Side -> Maybe Move
 findmate b [] t                    = Nothing
 findmate b m True  | length m == 1 = if (findmateboo b (getmoves b True) True  True  maxmatedepth) then Just (head m) else Nothing
 findmate b m False | length m == 1 = if (findmateboo b (getmoves b False) False False maxmatedepth) then Just (head m) else Nothing
-findmate b (x:xs) True  = if findmateboo b (getmoves b True)  True  True  maxmatedepth then Just x else findmate b xs False
-findmate b (x:xs) False = if findmateboo b (getmoves b False) False False maxmatedepth then Just x else findmate b xs False
+findmate b (x:xs) True             = if findmateboo b (getmoves b True)  True  True  maxmatedepth then Just x else findmate b xs False
+findmate b (x:xs) False            = if findmateboo b (getmoves b False) False False maxmatedepth then Just x else findmate b xs False
 
 findmateboo :: Board -> [Move] -> Side -> Bool -> Int -> Bool
 findmateboo b m t alt 0                     = checkmate b (not t)

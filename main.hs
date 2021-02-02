@@ -93,7 +93,7 @@ play b False = do
 --This function tests if the move is valid and plays it if it is
 movement :: Board -> Move -> Bool -> IO()
 movement b m x = if validmove b m (not x)
-                 then putStrLn "Good Move" >> play (executemove b m) x
+                 then putStrLn "Good Move" >> play (premove b m) x
                  else putStrLn "Bad Move" >> play b (not x)
 
 playbotw :: Board -> Bool -> IO()
@@ -108,8 +108,8 @@ playbotw b True = do
 playbotw b False = do
                 printboard b
                 if gameover b False then reset' True else do
-                      let m = getbotmove b False
-                      playbotw (executemove b m) True
+                      let m = findbestmove b False
+                      playbotw (premove b m) True
                       putStrLn "Bot played:"
                       putStrLn (show m)
 
@@ -117,8 +117,8 @@ playbotb :: Board -> Bool -> IO()
 playbotb b True = do
                 printboard b
                 if gameover b False then reset' True else do
-                      let m = getbotmove b True
-                      playbotb (executemove b m) False
+                      let m = findbestmove b True
+                      playbotb (premove b m) False
                       putStrLn "Bot played:"
                       putStrLn (show m)
 playbotb b False = do
@@ -132,12 +132,12 @@ playbotb b False = do
 
 movementbotb :: Board -> Move -> IO()
 movementbotb b m = if validmove b m False
-               then putStrLn "Good Move" >> playbotb (executemove b m) True
+               then putStrLn "Good Move" >> playbotb (premove b m) True
                else putStrLn "Bad Move" >> playbotb b False
 
 movementbotw :: Board -> Move -> IO()
 movementbotw b m = if validmove b m True
-               then putStrLn "Good Move" >> playbotw (executemove b m) False
+               then putStrLn "Good Move" >> playbotw (premove b m) False
                else putStrLn "Bad Move" >> playbotw b True
 
 reset' :: Bool -> IO()
