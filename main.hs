@@ -1,4 +1,9 @@
 import Chess
+import AI
+import Types
+import Printing
+import Movechecker
+import Boards
 
 --This function creates the initial chess board position
 --Then the function calls the main play function
