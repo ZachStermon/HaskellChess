@@ -9,9 +9,15 @@ module Movechecker
 , gameover
 ) where
 
+--Necessary imports
 import Types
 import Chess
 import Helpers
+
+--FOR TESTING ONLY
+import Boards
+
+
 
 -- Returns a list of up to four potentially legal pawn moves
 getpawnmoves :: State -> Position -> [Position]
@@ -50,6 +56,25 @@ getrookmoves (State {board = b, turn = t}) p =
                          | otherwise            = acc
   in checkup [] (p-8) ++ checkdown [] (p+8) ++ checkleft [] (p-1) ++ checkright [] (p+1)
 
+--returns a list of potentially legal knight moves
+getknightmoves :: State -> Position -> [Position]
+getknightmoves (State {board = b, turn = t}) p =
+  let m1 = if inrange (p,p+10) && notfriendlyfire b (p,p+10) && nmovement (p,p+10) then [p+10]    else []
+      m2 = if inrange (p,p+17) && notfriendlyfire b (p,p+17) && nmovement (p,p+17) then (p+17):m1 else m1
+      m3 = if inrange (p,p+15) && notfriendlyfire b (p,p+15) && nmovement (p,p+15) then (p+15):m2 else m2
+      m4 = if inrange (p,p+6)  && notfriendlyfire b (p,p+6)  && nmovement (p,p+6)  then (p+6):m3  else m3
+      m5 = if inrange (p,p-10) && notfriendlyfire b (p,p-10) && nmovement (p,p-10) then (p-10):m4 else m4
+      m6 = if inrange (p,p-17) && notfriendlyfire b (p,p-17) && nmovement (p,p-17) then (p-17):m5 else m5
+      m7 = if inrange (p,p-15) && notfriendlyfire b (p,p-15) && nmovement (p,p-15) then (p-15):m6 else m6
+      m8 = if inrange (p,p-6)  && notfriendlyfire b (p,p-6)  && nmovement (p,p-6)  then (p-6):m7  else m7
+  in m8
+
+--checks the knight movement type so that it cannot travel accross the board
+nmovement :: Move -> Bool
+nmovement (o,d) = ((abs (row o - row d) * (abs (col o - col d))) == 2)
+
+
+--TODO updated getmoves function
 
 
 
@@ -112,8 +137,7 @@ pmovementb b (o,d) = ((col o == col d) && (row d - row o == 1) && (not (exists b
               || ((d - o == 9) && (isenemy b d False) && (col o /= 7)) --downright +9
 
 
-nmovement :: Move -> Bool
-nmovement (o,d) = ((abs (row o - row d) * (abs (col o - col d))) == 2)
+
 
 bmovement :: Move -> Bool
 bmovement (o,d) = (abs(row o - row d) == abs(col o - col d))

@@ -15,9 +15,8 @@ type Turn = Bool
 data State = State { turn :: Bool,
                      board :: Board,
                      history :: [Move],
-                     blackcanlongcastle :: Bool,
-                     blackcanshortcastle :: Bool,
-                     whitecanlongcastle :: Bool,
-                     whitecanshortcastle :: Bool,
-                     capturedpieces :: [Piece]
+                     wl :: Bool,
+                     ws :: Bool,
+                     bl :: Bool,
+                     bs :: Bool
                     } deriving (Show, Eq)

@@ -8,6 +8,7 @@ module Chess
 , inrange
 , exists
 , isenemy
+, makestate
 ) where
 
 import Helpers
@@ -27,7 +28,7 @@ board representation is a single vector:
     A  B  C  D  E  F  G  H
 -}
 
---
+
 
 
 
@@ -50,17 +51,31 @@ makestate b t = State {
   board = b,
   turn = t,
   history = [],
-  blackcanlongcastle = True,
-  blackcanshortcastle = True,
-  whitecanlongcastle = True,
-  whitecanshortcastle = True,
-  capturedpieces = [] }
+  wl = True,
+  ws = True,
+  bl = True,
+  bs = True}
 
+--TODO castling rights
+updatemove :: State -> Move -> State
+updatemove s m = let b = board s
+                 in updateturn (updatehistory (updateboard s (premove b m)) m)
 
+updateboard :: State -> Board -> State
+updateboard state b = state {board = b}
 
+updatehistory :: State -> Move -> State
+updatehistory state m = state {history = (history state) ++ [m]}
 
+updateturn :: State -> State
+updateturn state = state {turn = not (turn state)}
 
-
+--TODO
+updatecastle :: State -> String -> State
+updatecastle state "wl" = state {wl = False}
+updatecastle state "ws" = state {ws = False}
+updatecastle state "bl" = state {bl = False}
+updatecastle state "bs" = state {bs = False}
 
 
 inrange :: Move -> Bool
@@ -71,7 +86,7 @@ exists b i | i < 0 || i > 63 = error ("Out of bounds, exists function")
 exists b i = (b !! i) /= Nothing
 
 notfriendlyfire :: Board -> Move -> Bool
-notfriendlyfire b (o,d) = (getcolor $ b!!o) /= (getcolor $ b!!d)
+notfriendlyfire b (o,d) = null (b!!d) || ((getcolor $ b!!o) /= (getcolor $ b!!d))
 
 correctturn :: Board -> Int -> Side -> Bool
 correctturn b i _ | (i < 0 || i > 63) = error ("Out of bounds, correct turn")
@@ -83,14 +98,15 @@ isenemy :: Board -> Position -> Side -> Bool
 isenemy b i t | i < 0 || i > 63 = error ("Out of bounds, isenemy function")
 isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
 
---this function will handle moving a piece after it has been cleared
---this will help with castling, en passant, and promote
---TODO
+-- this function will handle moving a piece after it has been cleared
+-- this will help with castling, en passant, and promote
+-- also takes a state object so that it can determine if castling can be done
+-- TODO
 premove :: Board -> Move -> Board
-premove b (o,d) | b!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote b (o,d) True  else executemove b (o,d)
-premove b (o,d) | b!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote b (o,d) False else executemove b (o,d)
-premove b (o,d) | o == 60 || o == 4                 = if (whitecastle b (o,d) || blackcastle b (o,d)) then docastle b (o,d) else executemove b (o,d)
-premove b m                                         = executemove b m
+premove b (o,d)  | b!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote b (o,d) True  else executemove b (o,d)
+                 | b!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote b (o,d) False else executemove b (o,d)
+                 | o == 60 || o == 4                 = if whitecastle b (o,d) || blackcastle b (o,d) then docastle b (o,d) else executemove b (o,d)
+premove b m                                          = executemove b m
 
 promote :: Board -> Move -> Side -> Board
 promote b (o,d) t = setspotonboard (setspotonboard b Nothing o) (Just (Piece Queen t)) d
