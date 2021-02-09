@@ -1,19 +1,28 @@
 module Chess
-( premove
+( domove
 , whitecastle
 , blackcastle
-, findpiece
 , notfriendlyfire
 , correctturn
 , inrange
 , exists
 , isenemy
 , makestate
+, getcolor
+, premove
+, findpiece
+, existsblackking
+, existswhiteking
+, updateturn
 ) where
 
+--Imports
 import Helpers
 import Types
 import Printing
+
+--FOR TESTING ONLY
+import Boards
 
 {-
 board representation is a single vector:
@@ -57,9 +66,8 @@ makestate b t = State {
   bs = True}
 
 --TODO castling rights
-updatemove :: State -> Move -> State
-updatemove s m = let b = board s
-                 in updateturn (updatehistory (updateboard s (premove b m)) m)
+domove :: State -> Move -> State
+domove s m = updatecastle (updateturn (updatehistory (updateboard s (premove (board s) m)) m)) m
 
 updateboard :: State -> Board -> State
 updateboard state b = state {board = b}
@@ -71,11 +79,14 @@ updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
 --TODO
-updatecastle :: State -> String -> State
-updatecastle state "wl" = state {wl = False}
-updatecastle state "ws" = state {ws = False}
-updatecastle state "bl" = state {bl = False}
-updatecastle state "bs" = state {bs = False}
+updatecastle :: State -> Move -> State
+updatecastle state (0,d)  = state {bl = False}
+updatecastle state (7,d)  = state {bs = False}
+updatecastle state (4,d)  = state {bs = False, bl = False}
+updatecastle state (56,d) = state {wl = False}
+updatecastle state (63,d) = state {ws = False}
+updatecastle state (60,d) = state {ws = False, wl = False}
+updatecastle s m = s
 
 
 inrange :: Move -> Bool
@@ -146,5 +157,8 @@ findpiece' b p n = if (b !! n == p) then n else findpiece' b p (n+1)
 
 
 -- ?? TODO?
-existskings :: Board -> Bool
-existskings b = (findpiece b (Just (Piece King False)) /= -1) && (findpiece b (Just (Piece King True)) /= -1)
+existsblackking :: Board -> Bool
+existsblackking b = findpiece b (Just (Piece King False)) /= -1
+
+existswhiteking :: Board -> Bool
+existswhiteking b = findpiece b (Just (Piece King True)) /= -1
