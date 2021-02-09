@@ -13,10 +13,11 @@ import Movechecker
 import Boards
 import Printing
 m2 = makestate mateintwo True
+m2v2 = makestate mateintwov2 False
+m3 = makestate mateinthree True
 
 --declarations
-maxdepth = 2
-maxmatedepth = 3
+maxdepth = 4
 minval = -12345
 maxval = 12345
 
@@ -65,20 +66,11 @@ value (Just (Piece King False))      = -9999.9
 findbestmove :: State -> Move
 findbestmove s = if turn s then snd $ maximum (movesranked s) else snd $ minimum (movesranked s)
 
--- movesranked :: State -> [(Double, Move)]
--- movesranked s | null (getmoves s 0) = error("no moves in movesranked")
--- movesranked s = map (\x -> (minimax (domove s x) (getmoves ((domove s x)) 0) maxdepth, x)) (getmoves s 0)
+
 
 movesranked :: State -> [(Double, Move)]
 movesranked s | null (getmoves s 0) = error("no moves in movesranked")
 movesranked s = map (\x -> (minimax (domove s x) (getmoves ((domove s x)) 0) maxdepth, x)) (getmoves s 0)
-
--- tempfunc :: State -> [Move] -> (Double, Move) -> Maybe (Double, Move)
--- tempfunc s [] a    = a
--- tempfunc s (x:xs) a | turn s = if  move > 999 then  Just (move, x) else if move > a then tempfunc s xs move else tempfunc s xs a
---     where move = minimax (domove s x) (getmoves ((domove s x)) 0) maxdepth
--- tempfunc s (x:xs) a         = if  move < -999 then Just (move, x) else if move < a then tempfunc s xs move else tempfunc s xs a
---     where move = minimax (domove s x) (getmoves ((domove s x)) 0) maxdepth
 
 
 
