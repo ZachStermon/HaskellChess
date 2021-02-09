@@ -12,11 +12,15 @@ import Movechecker
 --FOR TESTING ONLY
 import Boards
 import Printing
+m2 = makestate mateintwo True
 
+--declarations
 maxdepth = 2
 maxmatedepth = 3
 minval = -12345
 maxval = 12345
+
+
 
 
 -- stalemate cannot happen in testing, kings can be captured
@@ -79,6 +83,7 @@ movesranked s = map (\x -> (minimax (domove s x) (getmoves ((domove s x)) 0) max
 
 
 --this function accepts a state, a list of legal moves for current player, and the depth
+--returns the evaluation for a single move, breadth first
 minimax :: State -> [Move] -> Int -> Double
 minimax s m depth | attacked s enemyking                 = if turn s then maxval + fromIntegral depth else minval - fromIntegral depth
             where enemyking = findpiece (board s) (Just (Piece King (not(turn s))))

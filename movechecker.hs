@@ -8,6 +8,7 @@ module Movechecker
 , checkmate
 , notabletomove
 , attacked
+, gameover
 ) where
 
 --Necessary imports
@@ -17,7 +18,7 @@ import Helpers
 
 --FOR TESTING ONLY
 import Boards
-
+import Printing
 
 
 -- Returns a list of up to four potentially legal pawn moves
@@ -103,7 +104,7 @@ bmovement (o,d) = (abs(row o - row d) == abs(col o - col d))
 getkingmoves :: State -> Position -> [Move]
 getkingmoves s p =
   let b = board s
-      m1 = if inrange (p,p+1) && notfriendlyfire b (p,p+1) && kmovement (p,p+1) then [(p,p+1)]  else [] ++ getcastlemoves s p
+      m1 = if inrange (p,p+1) && notfriendlyfire b (p,p+1) && kmovement (p,p+1) then [(p,p+1)]  else []
       m2 = if inrange (p,p+9) && notfriendlyfire b (p,p+9) && kmovement (p,p+9) then (p,p+9):m1 else m1
       m3 = if inrange (p,p+8) && notfriendlyfire b (p,p+8) && kmovement (p,p+8) then (p,p+8):m2 else m2
       m4 = if inrange (p,p+7) && notfriendlyfire b (p,p+7) && kmovement (p,p+7) then (p,p+7):m3 else m3
@@ -113,41 +114,45 @@ getkingmoves s p =
       m8 = if inrange (p,p-7) && notfriendlyfire b (p,p-7) && kmovement (p,p-7) then (p,p-7):m7 else m7
   in m8
 
+--validates king movement type
 kmovement :: Move -> Bool
 kmovement (o,d) = (abs (row o - row d) <= 1 && (abs (col o - col d)) <= 1)
 
+--gets list of potentially valid moves by castling
 getcastlemoves :: State -> Position -> [Move]
-getcastlemoves (State {turn = True,  board = b, wl = z, ws = y}) p =
-  let m1 = if z && whitecastle b (p, p+2) then [(p,p+2)]    else []
-      m2 = if y && whitecastle b (p, p-2) then (p,p-2):m1   else m1
+getcastlemoves s p | turn s =
+  let m1 = if (wl s) && whitecastle s (p, p+2) then [(p,p+2)]    else []
+      m2 = if (ws s) && whitecastle s (p, p-2) then (p,p-2):m1   else m1
   in m2
-getcastlemoves (State {turn = False, board = b, bl = z, bs = y}) p =
-  let m1 = if z && blackcastle b (p, p+2) then [(p,p+2)]    else []
-      m2 = if y && blackcastle b (p, p-2) then (p,p-2):m1   else m1
+getcastlemoves s p =
+  let m1 = if (bl s) && blackcastle s (p, p+2) then [(p,p+2)]    else []
+      m2 = if (bs s) && blackcastle s (p, p-2) then (p,p-2):m1   else m1
   in m2
 
 
-
+--gets a list of moves for the current board, pass in zero to test the entire board
+--returns moves which might put the player in check
 getmoves :: State -> Position -> [Move]
 getmoves s 64 = []
 getmoves s n  =
   let b = board s
-  in getmovesforspot s (b!!n) (turn s) n ++ getmoves s (n+1)
+  in getmovesforspot s (b!!n) n ++ getmoves s (n+1)
 
-getmovesforspot :: State -> Spot -> Turn -> Position -> [Move]
-getmovesforspot s Nothing t n                   = []
-getmovesforspot s spot t n | getcolor spot /= t = []
-getmovesforspot s (Just (Piece Pawn _))   t n   = getpawnmoves   s n
-getmovesforspot s (Just (Piece Knight _)) t n   = getknightmoves s n
-getmovesforspot s (Just (Piece Bishop _)) t n   = getbishopmoves s n
-getmovesforspot s (Just (Piece Rook _))   t n   = getrookmoves   s n
-getmovesforspot s (Just (Piece Queen _))  t n   = getbishopmoves s n ++ getrookmoves s n
-getmovesforspot s (Just (Piece King _))   t n   = getkingmoves   s n
+--returns a list of moves for a given spot at a specified position
+getmovesforspot :: State -> Spot -> Position -> [Move]
+getmovesforspot s Nothing  n                       = []
+getmovesforspot s spot n | getcolor spot /= turn s = []
+getmovesforspot s (Just (Piece Pawn _))   n        = getpawnmoves   s n
+getmovesforspot s (Just (Piece Knight _)) n        = getknightmoves s n
+getmovesforspot s (Just (Piece Bishop _)) n        = getbishopmoves s n
+getmovesforspot s (Just (Piece Rook _))   n        = getrookmoves   s n
+getmovesforspot s (Just (Piece Queen _))  n        = getbishopmoves s n ++ getrookmoves   s n
+getmovesforspot s (Just (Piece King _))   n        = getkingmoves   s n ++ getcastlemoves s n
 
 
 --TODO updated getmoves function
 validmove :: State -> Move -> Bool
-validmove s (o,d) = (o,d) `elem` (getmoves s 0)
+validmove s (o,d) = (o,d) `elem` (getmoves s 0) && not (incheck (updateturn (domove s (o,d))))
 
 
 
@@ -156,19 +161,14 @@ validmove s (o,d) = (o,d) `elem` (getmoves s 0)
 
 
 
---
+--returns true if and only if the current sides king can be attacked by an enemy piece
 incheck :: State -> Bool
 incheck s  = attacked (updateturn s) (findpiece (board s) (Just (Piece King (turn s))))
 
---
--- notcheckmove :: Board -> Move -> Bool -> Bool
--- notcheckmove b (o,d) t | d < 0 || d > 63 = error ("error in notcheckmove")
--- notcheckmove b (o,d) t = not (incheck (premove b (o,d)) t) && b!!d /= (Just (Piece King True)) && b!!d /= (Just (Piece King False))
---
---
--- gameover :: Board -> Bool -> Bool
--- gameover b t = (checkmate b t) || (stalemate b t)
---
+--returns true if the current player is in checkmate or stalemate
+gameover :: State -> Bool
+gameover s = (checkmate s) || (stalemate s)
+
 
 --not in check and not able to move
 stalemate :: State -> Bool

@@ -65,9 +65,9 @@ makestate b t = State {
   bl = True,
   bs = True}
 
---TODO castling rights
+--Intermediary between states and premove
 domove :: State -> Move -> State
-domove s m = updatecastle (updateturn (updatehistory (updateboard s (premove (board s) m)) m)) m
+domove s m = updatecastle (updateturn (updatehistory (premove s m) m)) m
 
 updateboard :: State -> Board -> State
 updateboard state b = state {board = b}
@@ -78,7 +78,7 @@ updatehistory state m = state {history = (history state) ++ [m]}
 updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
---TODO
+--TODO probably a better way to do this
 updatecastle :: State -> Move -> State
 updatecastle state (0,d)  = state {bl = False}
 updatecastle state (7,d)  = state {bs = False}
@@ -113,32 +113,33 @@ isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
 -- this will help with castling, en passant, and promote
 -- also takes a state object so that it can determine if castling can be done
 -- TODO
-premove :: Board -> Move -> Board
-premove b (o,d)  | b!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote b (o,d) True  else executemove b (o,d)
-                 | b!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote b (o,d) False else executemove b (o,d)
-                 | o == 60 || o == 4                 = if whitecastle b (o,d) || blackcastle b (o,d) then docastle b (o,d) else executemove b (o,d)
-premove b m                                          = executemove b m
+premove :: State -> Move -> State
+premove s (o,d)  | (board s)!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
+                 | (board s)!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
+                 | o == 60 || o == 4                         = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
+premove s m                                                  = updateboard s (executemove (board s) m)
 
-promote :: Board -> Move -> Side -> Board
-promote b (o,d) t = setspotonboard (setspotonboard b Nothing o) (Just (Piece Queen t)) d
-
-
-docastle :: Board -> Move -> Board
-docastle b (60, 58) = executemove (executemove b (56,59)) (60, 58)
-docastle b (60, 62) = executemove (executemove b (63,61)) (60, 62)
-docastle b (4,6)    = executemove (executemove b (7,5)) (4,6)
-docastle b (4,2)    = executemove (executemove b (0,3)) (4,2)
+promote :: State -> Move -> State
+promote s (o,d) = updateboard s b
+      where b = setspotonboard (setspotonboard (board s) Nothing o) (Just (Piece Queen (turn s))) d
 
 
-whitecastle :: Board -> Move -> Bool
-whitecastle b (60, 62) = not (exists b 61) && not (exists b 62)
-whitecastle b (60, 58) = not (exists b 57) && not (exists b 58) && not (exists b 59)
-whitecastle b _        = False
+docastle :: State -> Move -> State
+docastle s (60, 58) = updateboard s (executemove (executemove (board s) (56,59)) (60, 58))
+docastle s (60, 62) = updateboard s (executemove (executemove (board s) (63,61)) (60, 62))
+docastle s (4,6)    = updateboard s (executemove (executemove (board s) (7,5)) (4,6))
+docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (4,2))
 
-blackcastle :: Board -> Move -> Bool
-blackcastle b (4, 6) = not (exists b 5) && not (exists b 6)
-blackcastle b (4, 2) = not (exists b 1) && not (exists b 2) && not (exists b 3)
-blackcastle b _      = False
+
+whitecastle :: State -> Move -> Bool
+whitecastle s (60, 62) = not (exists (board s) 61) && not (exists (board s) 62)
+whitecastle s (60, 58) = not (exists (board s) 57) && not (exists (board s) 58) && not (exists (board s) 59)
+whitecastle s _        = False
+
+blackcastle :: State -> Move -> Bool
+blackcastle s (4, 6) = not (exists (board s) 5) && not (exists (board s) 6)
+blackcastle s (4, 2) = not (exists (board s) 1) && not (exists (board s) 2) && not (exists (board s) 3)
+blackcastle s _      = False
 
 
 --LEFT DIAGONAL \ mod 9
