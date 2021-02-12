@@ -1,7 +1,5 @@
 module Movechecker
 ( getmoves
-, exists
-, inrange
 , validmove
 , incheck
 , stalemate
@@ -9,12 +7,15 @@ module Movechecker
 , notabletomove
 , attacked
 , gameover
+, notcheckmove
 ) where
 
 --Necessary imports
 import Types
 import Chess
 import Helpers
+import Data.Sequence
+import Data.Maybe
 
 --FOR TESTING ONLY
 import Boards
@@ -24,14 +25,14 @@ import Printing
 -- Returns a list of up to four potentially legal pawn moves
 getpawnmoves :: State -> Position -> [Move]
 getpawnmoves (State {board = b, turn = False}) p =
-  let m1 = if null (b !! (p + 8)) then [(p,p+8)] else []
-      m2 = if row p == 1 && null (b!!(p+8)) && null (b!!(p+16)) then (p,p+16):m1 else m1
+  let m1 = if isNothing (index b (p + 8)) then [(p,p+8)] else []
+      m2 = if row p == 1 && isNothing (index b (p+8)) && isNothing (index b (p+16)) then (p,p+16):m1 else m1
       m3 = if (isenemy b (p+7) False) then (p,p+7):m2 else m2
       m4 = if (isenemy b (p+9) False) then (p,p+9):m3 else m3
   in m4
 getpawnmoves (State {board = b, turn = True}) p =
-  let m1 = if null (b !! (p-8)) then [(p,p-8)] else []
-      m2 = if row p == 6 && null (b !! (p-8)) && null (b !! (p-16)) then (p,p-16):m1 else m1
+  let m1 = if isNothing (index b (p-8)) then [(p,p-8)] else []
+      m2 = if row p == 6 && isNothing (index b (p-8)) && isNothing (index b (p-16)) then (p,p-16):m1 else m1
       m3 = if (isenemy b (p-7) True) then (p,p-7):m2 else m2
       m4 = if (isenemy b (p-9) True) then (p,p-9):m3 else m3
   in m4
@@ -42,19 +43,19 @@ getrookmoves :: State -> Position -> [Move]
 getrookmoves (State {board = b, turn = t}) p    =
   let checkup acc pos    | pos < 0              = acc
                          | isenemy b pos t      = (p,pos):acc
-                         | null (b!!pos)        = checkup ((p,pos):acc) (pos-8)
+                         | isNothing (index b pos) = checkup ((p,pos):acc) (pos-8)
                          | otherwise            = acc
       checkdown acc pos  | pos > 63             = acc
                          | isenemy b pos t      = (p,pos):acc
-                         | null (b!!pos)        = checkdown ((p,pos):acc) (pos+8)
+                         | isNothing (index b pos)   = checkdown ((p,pos):acc) (pos+8)
                          | otherwise            = acc
       checkleft acc pos  | (pos `mod` 8) == 7   = acc
                          | isenemy b pos t      = (p,pos):acc
-                         | null (b!!pos)        = checkleft ((p,pos):acc) (pos-1)
+                         | isNothing (index b pos)   = checkleft ((p,pos):acc) (pos-1)
                          | otherwise            = acc
       checkright acc pos | (pos `mod` 8) == 0   = acc
                          | isenemy b pos t      = (p,pos):acc
-                         | null (b!!pos)        = checkright ((p,pos):acc) (pos+1)
+                         | isNothing (index b pos)   = checkright ((p,pos):acc) (pos+1)
                          | otherwise            = acc
   in checkup [] (p-8) ++ checkdown [] (p+8) ++ checkleft [] (p-1) ++ checkright [] (p+1)
 
@@ -78,21 +79,21 @@ nmovement (o,d) = ((abs (row o - row d) * (abs (col o - col d))) == 2)
 getbishopmoves :: State -> Position -> [Move]
 getbishopmoves (State {board = b, turn = t}) p =
   let checkupleft acc pos    |  not (bmovement (p,pos)) || not (inrange (p,pos))  = acc
-                             | isenemy b pos t      = (p,pos):acc
-                             | null (b!!pos)        = checkupleft ((p,pos):acc) (pos-9)
-                             | otherwise            = acc
+                             | isenemy b pos t                                    = (p,pos):acc
+                             | isNothing (index b pos)                            = checkupleft ((p,pos):acc) (pos-9)
+                             | otherwise                                          = acc
       checkdownleft acc pos  | not (bmovement (p,pos)) || not (inrange (p,pos))   = acc
-                             | isenemy b pos t      = (p,pos):acc
-                             | null (b!!pos)        = checkdownleft ((p,pos):acc) (pos+7)
-                             | otherwise            = acc
+                             | isenemy b pos t                                    = (p,pos):acc
+                             | isNothing (index b pos)                            = checkdownleft ((p,pos):acc) (pos+7)
+                             | otherwise                                          = acc
       checkdownright acc pos | not (bmovement (p,pos)) || not (inrange (p,pos))   = acc
-                             | isenemy b pos t      = (p,pos):acc
-                             | null (b!!pos)        = checkdownright ((p,pos):acc) (pos+9)
-                             | otherwise            = acc
+                             | isenemy b pos t                                    = (p,pos):acc
+                             | isNothing (index b pos)                            = checkdownright ((p,pos):acc) (pos+9)
+                             | otherwise                                          = acc
       checkupright acc pos   | not (bmovement (p,pos)) || not (inrange (p,pos))   = acc
-                             | isenemy b pos t      = (p,pos):acc
-                             | null (b!!pos)        = checkupright ((p,pos):acc) (pos-7)
-                             | otherwise            = acc
+                             | isenemy b pos t                                    = (p,pos):acc
+                             | isNothing (index b pos)                            = checkupright ((p,pos):acc) (pos-7)
+                             | otherwise                                          = acc
   in checkupleft [] (p-9) ++ checkdownleft [] (p+7) ++ checkdownright [] (p+9) ++ checkupright [] (p-7)
 
 --makes sure the bishop does not wrongfully travel across the board
@@ -133,8 +134,8 @@ getcastlemoves s p =
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
 getmoves :: State -> Position -> [Move]
-getmoves s 63 = getmovesforspot s ((board s)!!63) 63
-getmoves s n  = getmovesforspot s ((board s)!!n) n ++ getmoves s (n+1)
+getmoves s 63 = getmovesforspot s (index (board s) 63) 63
+getmoves s n  = getmovesforspot s (index (board s) n) n ++ getmoves s (n+1)
 
 
 --returns a list of moves for a given spot at a specified position
@@ -153,8 +154,10 @@ getmovesforspot s (Just (Piece King _))   n   = getkingmoves   s n ++ getcastlem
 
 --TODO updated getmoves function
 validmove :: State -> Move -> Bool
-validmove s (o,d) = not (incheck (updateturn (domove s (o,d))))
+validmove s (o,d) = (o,d) `elem` getmoves s 0 && notcheckmove s (o,d)
 
+notcheckmove :: State -> Move -> Bool
+notcheckmove s m = not $ incheck (updateturn (domove s m))
 
 --returns true if and only if the current sides king can be attacked by an enemy piece
 incheck :: State -> Bool
@@ -179,5 +182,6 @@ checkmate :: State -> Bool
 checkmate s = incheck s && notabletomove s (getmoves s 0)
 
 --returns true if and only if the square is attacked by the current player
-attacked :: State -> Int -> Bool
-attacked s i = i `elem` (map snd (getmoves s 0))
+attacked :: State -> Maybe Int -> Bool
+attacked s Nothing  = False
+attacked s (Just i) = i `elem` (map snd (getmoves s 0))

@@ -3,21 +3,21 @@ module Chess
 , whitecastle
 , blackcastle
 , notfriendlyfire
-, correctturn
 , inrange
-, exists
-, isenemy
 , makestate
 , getcolor
 , premove
 , findpiece
 , updateturn
+, isenemy
 ) where
 
 --Imports
 import Helpers
 import Types
 import Printing
+import Data.Sequence
+import Data.Maybe
 
 --FOR TESTING ONLY
 import Boards
@@ -40,14 +40,12 @@ board representation is a single vector:
 
 --this function sets a specified board position to input
 setspotonboard :: Board -> Spot -> Position -> Board
-setspotonboard (x:xs) a num
-  | num == 0 = a:xs
-  | otherwise = x:setspotonboard xs a (num-1)
+setspotonboard b sp num = update num sp b
 
 
 --execute move takes a board and a move and will return a new board with the updated move having been played.
 executemove :: Board -> Move -> Board
-executemove b (o,d) = setspotonboard (setspotonboard b (b!!o) d) Nothing o
+executemove b (o,d) = setspotonboard (setspotonboard b (index b o) d) Nothing o
 
 --gets the color of a piece and returns either True for white or False for black.
 getcolor :: Spot -> Bool
@@ -98,35 +96,23 @@ inrange :: Move -> Bool
 inrange (o,d) = (o >= 0 && o <= 63) && (d >= 0 && d <= 63)
 
 
---given a board and a position will tell you if theres a piece there.
-exists :: Board -> Position -> Bool
-exists b i | i < 0 || i > 63 = error ("Out of bounds, exists function")
-exists b i = (b !! i) /= Nothing
 
 
 --makes sure that the piece being attacked is not the same color, if so notfriendlyfire returns True
 notfriendlyfire :: Board -> Move -> Bool
-notfriendlyfire b (o,d) = null (b!!d) || ((getcolor $ b!!o) /= (getcolor $ b!!d))
+notfriendlyfire b (o,d) = isNothing (index b d) || ((getcolor $ index b o) /= (getcolor $ index b d))
 
 
---this function verifies that the turn is correct for the piece being moved.
-correctturn :: Board -> Int -> Side -> Bool
-correctturn b i _ | (i < 0 || i > 63) = error ("Out of bounds, correct turn")
-correctturn b i t  = getcolor (b!!i) == t
 
 
---checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
-isenemy :: Board -> Position -> Side -> Bool
-isenemy b i t | i < 0 || i > 63 = error ("Out of bounds, isenemy function")
-isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
 
 -- this function will handle moving a piece after it has been cleared
 -- this will help with castling, en passant, and promote
 -- also takes a state object so that it can determine if castling can be done
 -- TODO
 premove :: State -> Move -> State
-premove s (o,d)  | (board s)!!o == (Just (Piece Pawn True))  = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
-                 | (board s)!!o == (Just (Piece Pawn False)) = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
+premove s (o,d)  | (index (board s) o) == (Just (Piece Pawn True))  = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
+                 | (index (board s) o) == (Just (Piece Pawn False)) = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
                  | o == 60 || o == 4                         = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
 premove s m                                                  = updateboard s (executemove (board s) m)
 
@@ -145,15 +131,15 @@ docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (
 
 --checks for castling on white team.
 whitecastle :: State -> Move -> Bool
-whitecastle s (60, 62) = not (exists (board s) 61) && not (exists (board s) 62)
-whitecastle s (60, 58) = not (exists (board s) 57) && not (exists (board s) 58) && not (exists (board s) 59)
+whitecastle s (60, 62) = isNothing (index (board s) 61) && isNothing (index (board s) 62)
+whitecastle s (60, 58) = isNothing (index (board s) 57) && isNothing (index (board s) 58) && isNothing (index (board s) 59)
 whitecastle s _        = False
 
 
 --checks for castling on black team.
 blackcastle :: State -> Move -> Bool
-blackcastle s (4, 6) = not (exists (board s) 5) && not (exists (board s) 6)
-blackcastle s (4, 2) = not (exists (board s) 1) && not (exists (board s) 2) && not (exists (board s) 3)
+blackcastle s (4, 6) = isNothing (index (board s) 5) && isNothing (index (board s) 6)
+blackcastle s (4, 2) = isNothing (index (board s) 1) && isNothing (index (board s) 2) && isNothing (index (board s) 3)
 blackcastle s _      = False
 
 
@@ -162,19 +148,18 @@ blackcastle s _      = False
 
 
 --returns first instance of piece given
-findpiece :: Board -> Spot -> Int
-findpiece b p = findpiece' b p 0
-
-findpiece' :: Board -> Spot -> Int -> Int
-findpiece' b p 64 = -1
-findpiece' b p n = if (b !! n == p) then n else findpiece' b p (n+1)
+findpiece :: Board -> Spot -> Maybe Int
+findpiece b sp = elemIndexL sp b
 
 
+--checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
+isenemy :: Board -> Position -> Side -> Bool
+isenemy b i t = isJust (index b i) && (getcolor $ index b i) /= t
 
 
 -- ?? TODO?
 existsblackking :: Board -> Bool
-existsblackking b = findpiece b (Just (Piece King False)) /= -1
+existsblackking b = isJust $ findpiece b (Just (Piece King False))
 
 existswhiteking :: Board -> Bool
-existswhiteking b = findpiece b (Just (Piece King True)) /= -1
+existswhiteking b = isJust $ findpiece b (Just (Piece King True))

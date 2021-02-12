@@ -4,6 +4,9 @@ module Printing
 , stringtomove
 ) where
 
+import Data.Foldable (toList)
+import Data.Sequence (fromList)
+
 import Types
 import Helpers
 
@@ -39,10 +42,10 @@ getspot  _  = Nothing
 
 
 getboard :: String -> Board
-getboard string = map getspot string
+getboard string = fromList $ map getspot string
 
 showboard :: Board -> String
-showboard b = map showspot b
+showboard b = map showspot (toList b)
 
 
 boardtostring :: Board -> String

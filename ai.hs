@@ -9,6 +9,8 @@ import Types
 import Weights
 import Movechecker
 import Data.List
+import Data.Sequence hiding (null, sortBy, filter)
+import Data.Maybe
 
 --FOR TESTING ONLY
 import Boards
@@ -18,7 +20,7 @@ m2v2 = makestate mateintwov2 False
 m3 = makestate mateinthree True
 
 --declarations
-maxdepth = 4
+maxdepth = 2
 minval = -12345
 maxval = 12345
 
@@ -31,8 +33,10 @@ staticeval :: State -> Double
 staticeval (State{board=b})  = staticeval' b 0
 
 staticeval' :: Board -> Int -> Double
-staticeval' []     n = 0
-staticeval' (x:xs) n = if null x then (staticeval' xs (n+1)) else (value x) + (weightedposition x n) + (staticeval' xs (n+1))
+staticeval' b 63 = (value spot) + (weightedposition spot 63)
+  where spot = index b 63
+staticeval' b n  = (value spot) + (weightedposition spot n) + (staticeval' b (n+1))
+  where spot = index b n
 
 
 --this is a helper for the board weights(which can be seen in weights.hs)
@@ -104,7 +108,7 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
     where checkmoves m =
             let sign = if turn s then id else (0 -)
                 newstate = domove s m
-                newmoves = filter (validmove newstate) $ getmoves newstate 0
+                newmoves = filter (notcheckmove newstate) $ getmoves newstate 0
             in if null newmoves
                 then if incheck newstate then (sign maxval, m) else (0.0,m)
                 else (fst . head $ minimax newstate newmoves (depth-1),m)
