@@ -133,32 +133,27 @@ getcastlemoves s p =
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
 getmoves :: State -> Position -> [Move]
-getmoves s 64 = []
-getmoves s n  =
-  let b = board s
-  in getmovesforspot s (b!!n) n ++ getmoves s (n+1)
+getmoves s 63 = getmovesforspot s ((board s)!!63) 63
+getmoves s n  = getmovesforspot s ((board s)!!n) n ++ getmoves s (n+1)
+
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Spot -> Position -> [Move]
-getmovesforspot s Nothing  n                       = []
-getmovesforspot s spot n | getcolor spot /= turn s = []
-getmovesforspot s (Just (Piece Pawn _))   n        = getpawnmoves   s n
-getmovesforspot s (Just (Piece Knight _)) n        = getknightmoves s n
-getmovesforspot s (Just (Piece Bishop _)) n        = getbishopmoves s n
-getmovesforspot s (Just (Piece Rook _))   n        = getrookmoves   s n
-getmovesforspot s (Just (Piece Queen _))  n        = getbishopmoves s n ++ getrookmoves   s n
-getmovesforspot s (Just (Piece King _))   n        = getkingmoves   s n ++ getcastlemoves s n
+getmovesforspot s Nothing n                   = []
+getmovesforspot s x n | getcolor x /= turn s  = []
+getmovesforspot s (Just (Piece Pawn _))   n   = getpawnmoves   s n
+getmovesforspot s (Just (Piece Knight _)) n   = getknightmoves s n
+getmovesforspot s (Just (Piece Bishop _)) n   = getbishopmoves s n
+getmovesforspot s (Just (Piece Rook _))   n   = getrookmoves   s n
+getmovesforspot s (Just (Piece Queen _))  n   = getbishopmoves s n ++ getrookmoves   s n
+getmovesforspot s (Just (Piece King _))   n   = getkingmoves   s n ++ getcastlemoves s n
+
+
 
 
 --TODO updated getmoves function
 validmove :: State -> Move -> Bool
-validmove s (o,d) = (o,d) `elem` (getmoves s 0) && not (incheck (updateturn (domove s (o,d))))
-
-
-
-
-
-
+validmove s (o,d) = not (incheck (updateturn (domove s (o,d))))
 
 
 --returns true if and only if the current sides king can be attacked by an enemy piece

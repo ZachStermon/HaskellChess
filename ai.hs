@@ -8,6 +8,7 @@ import Chess
 import Types
 import Weights
 import Movechecker
+import Data.List
 
 --FOR TESTING ONLY
 import Boards
@@ -24,14 +25,17 @@ maxval = 12345
 
 
 
+--staticeval is used for evaluating the static board snapshot, diiferent pieces have different values and added weights make certain pieces worth more in different areas of the board.
 -- stalemate cannot happen in testing, kings can be captured
 staticeval :: State -> Double
 staticeval (State{board=b})  = staticeval' b 0
 
 staticeval' :: Board -> Int -> Double
-staticeval' b 64 = 0
-staticeval' b n  = if (exists b n) then (value $ b!!n)  + (weightedposition (b!!n) n) + (staticeval' b (n+1)) else (staticeval' b (n+1))
+staticeval' []     n = 0
+staticeval' (x:xs) n = if null x then (staticeval' xs (n+1)) else (value x) + (weightedposition x n) + (staticeval' xs (n+1))
 
+
+--this is a helper for the board weights(which can be seen in weights.hs)
 weightedposition :: Spot -> Int -> Double
 weightedposition Nothing                     n   = 0
 weightedposition (Just (Piece Pawn True))    n   =      weightedpawnwhite   !! n
@@ -47,6 +51,7 @@ weightedposition (Just (Piece Rook False))   n   = -1 * weightedrookblack   !! n
 weightedposition (Just (Piece Queen False))  n   = -1 * weightedqueenblack  !! n
 weightedposition (Just (Piece King False))   n   = -1 * weightedkingblack   !! n
 
+--these are the core values for the pieces on the board.
 value :: Spot -> Double
 value Nothing                        = 0
 value (Just (Piece Pawn True))       = 10.2
@@ -62,32 +67,56 @@ value (Just (Piece Rook False))      = -56.3
 value (Just (Piece Queen False))     = -95.1
 value (Just (Piece King False))      = -9999.9
 
-
+--looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
 findbestmove :: State -> Move
-findbestmove s = if turn s then snd $ maximum (movesranked s) else snd $ minimum (movesranked s)
+findbestmove s = snd . head $ minimax s (getmoves s 0) maxdepth
 
 
 
-movesranked :: State -> [(Double, Move)]
-movesranked s | null (getmoves s 0) = error("no moves in movesranked")
-movesranked s = map (\x -> (minimax (domove s x) (getmoves ((domove s x)) 0) maxdepth, x)) (getmoves s 0)
+--helper function forsotring the list of moves and values.
+sortmoves :: Bool -> [(Double, Move)] -> [(Double, Move)]
+sortmoves True  = sortBy (\x y -> (fst y) `compare` (fst x))
+sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
 
 
 
---this function accepts a state, a list of legal moves for current player, and the depth
---returns the evaluation for a single move, breadth first
-minimax :: State -> [Move] -> Int -> Double
-minimax s m depth | attacked s enemyking                 = if turn s then maxval + fromIntegral depth else minval - fromIntegral depth
-            where enemyking = findpiece (board s) (Just (Piece King (not(turn s))))
-minimax s m depth | notabletomove s (getmoves s 0)       = if incheck s then
-                                                           if turn s then minval - fromIntegral depth
-                                                           else           maxval + fromIntegral depth
-                                                           else 0
-minimax s m 0                                            = staticeval s
--- minimax s m depth | score > 999 || score < -999          = score
---             where score = staticeval s
-minimax s m depth | length m == 1                        = minimax state (getmoves state 0) (depth-1)
-            where state = domove s (head m)
-minimax s (x:xs) depth                                   = if turn s then max (minimax s xs depth) nextnode else min (minimax s xs depth) nextnode
-            where nextnode = minimax state (getmoves state 0) (depth-1)
-                  state = domove s x
+
+
+
+--this is essentially a macro to help testing
+test :: Board -> Turn -> Int -> [(Double, Move)]
+test b t d = minimax state (filter (validmove state) $ getmoves state 0) d
+  where state = (makestate b t)
+
+--same as above, like a macro for testing.
+printboard :: State -> IO()
+printboard s = putStr(boardtostring (board s))
+
+
+
+
+
+
+--minimax is the heart of the "AI" it looks at every possible board state up to a specified depth and will attempt to find a checkmate when possible
+minimax :: State -> [Move] -> Int -> [(Double, Move)]
+minimax s ms 0     = sortmoves (turn s) $ map (\m -> (staticeval (domove s m), m)) ms
+minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
+    where checkmoves m =
+            let sign = if turn s then id else (0 -)
+                newstate = domove s m
+                newmoves = filter (validmove newstate) $ getmoves newstate 0
+            in if null newmoves
+                then if incheck newstate then (sign maxval, m) else (0.0,m)
+                else (fst . head $ minimax newstate newmoves (depth-1),m)
+
+
+
+
+
+
+
+
+
+
+
+-- comment

@@ -11,8 +11,6 @@ module Chess
 , getcolor
 , premove
 , findpiece
-, existsblackking
-, existswhiteking
 , updateturn
 ) where
 
@@ -40,21 +38,24 @@ board representation is a single vector:
 
 
 
-
+--this function sets a specified board position to input
 setspotonboard :: Board -> Spot -> Position -> Board
 setspotonboard (x:xs) a num
   | num == 0 = a:xs
   | otherwise = x:setspotonboard xs a (num-1)
 
+
+--execute move takes a board and a move and will return a new board with the updated move having been played.
 executemove :: Board -> Move -> Board
 executemove b (o,d) = setspotonboard (setspotonboard b (b!!o) d) Nothing o
 
+--gets the color of a piece and returns either True for white or False for black.
 getcolor :: Spot -> Bool
 getcolor (Just (Piece _ t)) = t
 getcolor _  = undefined
 
 
-
+--this is a helper function that makes a state out of all of the specified information and stores it for function use.
 makestate :: Board -> Turn -> State
 makestate b t = State {
   board = b,
@@ -69,12 +70,16 @@ makestate b t = State {
 domove :: State -> Move -> State
 domove s m = updatecastle (updateturn (updatehistory (premove s m) m)) m
 
+
+--update board will update the state board when the board changes.
 updateboard :: State -> Board -> State
 updateboard state b = state {board = b}
 
+--updates the history of the current state.
 updatehistory :: State -> Move -> State
 updatehistory state m = state {history = (history state) ++ [m]}
 
+--updates the current turn of the state.
 updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
@@ -88,23 +93,29 @@ updatecastle state (63,d) = state {ws = False}
 updatecastle state (60,d) = state {ws = False, wl = False}
 updatecastle s m = s
 
-
+--tests for if the said move is in range of the board, within 0 and 63
 inrange :: Move -> Bool
 inrange (o,d) = (o >= 0 && o <= 63) && (d >= 0 && d <= 63)
 
+
+--given a board and a position will tell you if theres a piece there.
 exists :: Board -> Position -> Bool
 exists b i | i < 0 || i > 63 = error ("Out of bounds, exists function")
 exists b i = (b !! i) /= Nothing
 
+
+--makes sure that the piece being attacked is not the same color, if so notfriendlyfire returns True
 notfriendlyfire :: Board -> Move -> Bool
 notfriendlyfire b (o,d) = null (b!!d) || ((getcolor $ b!!o) /= (getcolor $ b!!d))
 
+
+--this function verifies that the turn is correct for the piece being moved.
 correctturn :: Board -> Int -> Side -> Bool
 correctturn b i _ | (i < 0 || i > 63) = error ("Out of bounds, correct turn")
 correctturn b i t  = getcolor (b!!i) == t
 
 
-
+--checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
 isenemy :: Board -> Position -> Side -> Bool
 isenemy b i t | i < 0 || i > 63 = error ("Out of bounds, isenemy function")
 isenemy b i t = (exists b i) && (getcolor $ b !! i) /= t
@@ -119,23 +130,27 @@ premove s (o,d)  | (board s)!!o == (Just (Piece Pawn True))  = if (row o == 1) t
                  | o == 60 || o == 4                         = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
 premove s m                                                  = updateboard s (executemove (board s) m)
 
+
+--This function handles the promoting of pawns into queens, updates the board with a new queen piece.
 promote :: State -> Move -> State
 promote s (o,d) = updateboard s b
       where b = setspotonboard (setspotonboard (board s) Nothing o) (Just (Piece Queen (turn s))) d
 
-
+--the driver for castling, actually performs the moves to move the pieces.
 docastle :: State -> Move -> State
 docastle s (60, 58) = updateboard s (executemove (executemove (board s) (56,59)) (60, 58))
 docastle s (60, 62) = updateboard s (executemove (executemove (board s) (63,61)) (60, 62))
 docastle s (4,6)    = updateboard s (executemove (executemove (board s) (7,5)) (4,6))
 docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (4,2))
 
-
+--checks for castling on white team.
 whitecastle :: State -> Move -> Bool
 whitecastle s (60, 62) = not (exists (board s) 61) && not (exists (board s) 62)
 whitecastle s (60, 58) = not (exists (board s) 57) && not (exists (board s) 58) && not (exists (board s) 59)
 whitecastle s _        = False
 
+
+--checks for castling on black team.
 blackcastle :: State -> Move -> Bool
 blackcastle s (4, 6) = not (exists (board s) 5) && not (exists (board s) 6)
 blackcastle s (4, 2) = not (exists (board s) 1) && not (exists (board s) 2) && not (exists (board s) 3)
@@ -151,7 +166,7 @@ findpiece :: Board -> Spot -> Int
 findpiece b p = findpiece' b p 0
 
 findpiece' :: Board -> Spot -> Int -> Int
-findpiece' b p n | n < 0 || n > 63 = -1
+findpiece' b p 64 = -1
 findpiece' b p n = if (b !! n == p) then n else findpiece' b p (n+1)
 
 

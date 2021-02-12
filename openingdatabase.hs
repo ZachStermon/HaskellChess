@@ -1,15 +1,9 @@
-module Openingdatabase where
+module GameTree where
 import Types
 import Chess
 
-data Tree = Tree Int Move [Tree] deriving (Show, Eq)
+data Tree = Node Move Board [Tree] deriving (Show, Eq)
 
-
-standardtofen :: Piece -> Position -> Move
-standardtofen
-
-use getspot
-
-movetoposition :: String -> Position
-
-loadnode ::
+gettree :: State -> [Move] -> Tree
+gettree s x       = Node x () []
+gettree s (x:xs)  = Node x (domove )
