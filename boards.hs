@@ -14,5 +14,4 @@ mateintwov2    = getboard ("Q--------------------k------R--p-------P--B---------
 mateintwov3    = getboard ("------k------ppp----b---p-q----------K------P---r-----PP---Q---R") --best moves are as follows: (c5f5 (S26,29)),(f5f2 (29,53))
 mateinthreev4  = getboard ("-------------B-----------K--------------------------R---k-------")
 mateinfour     = getboard ("-------------B-----------K-----------------R------------k-------")
-initial        = getboard ("rnbqkbnr" ++ "pppppppp" ++ empty ++ empty ++ empty ++ empty ++ "PPPPPPPP" ++ "RNBQKBNR")
-empty          = "--------"
+initial        = getboard ("rnbqkbnrpppppppp--------------------------------PPPPPPPPRNBQKBNR")

@@ -18,9 +18,10 @@ import Printing
 m2 = makestate mateintwo True
 m2v2 = makestate mateintwov2 False
 m3 = makestate mateinthree True
+initi = makestate initial True
 
 --declarations
-maxdepth = 2
+maxdepth = 3
 minval = -12345
 maxval = 12345
 
@@ -120,7 +121,43 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
 
 
 
+data Table = Table [([Move], Double)] deriving (Show, Eq)
+
+-- lookup :: lookuptable -> [Move] -> Maybe Double
+-- lookup t m = if m `elem` (map fst t) then Just ((map fst t))
 
 
+
+
+
+
+
+
+listtrees :: State -> [Move] -> [GameTree]
+listtrees s []      = [makenode s []]
+listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state 0))] ++ listtrees s xs
+  where state = domove s x
+
+maketree :: State -> GameTree
+maketree s = makenode s (listtrees s (getmoves s 0))
+
+makenode :: State -> [GameTree] -> GameTree
+makenode s n = GameTree{state = s, eval = (staticeval s), children = n}
+
+data GameTree = GameTree { state :: State,
+                           eval :: Double,
+                           children :: [GameTree]
+                          } deriving (Show, Eq)
+
+getnode :: GameTree -> GameTree
+getnode g = g{children = []}
+
+-- getchildnodes :: GameTree -> GameTree
+-- getchildnodes g= g{children = (\x -> )}
+
+gametree = maketree initi
+
+instance Show State where
+  show s = boardtostring (board s) ++ show (turn s) ++ "\n" ++ show (history s) ++ "\n"
 
 -- comment

@@ -59,6 +59,8 @@ makestate b t = State {
   board = b,
   turn = t,
   history = [],
+  whitepieces = findpieces b True,
+  blackpieces = findpieces b False,
   wl = True,
   ws = True,
   bl = True,
@@ -66,7 +68,7 @@ makestate b t = State {
 
 --Intermediary between states and premove
 domove :: State -> Move -> State
-domove s m = updatecastle (updateturn (updatehistory (premove s m) m)) m
+domove s m = updatepieces (updatecastle (updateturn (updatehistory (premove s m) m)) m) m
 
 
 --update board will update the state board when the board changes.
@@ -80,6 +82,10 @@ updatehistory state m = state {history = (history state) ++ [m]}
 --updates the current turn of the state.
 updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
+
+updatepieces :: State -> Move -> State
+updatepieces s (o,d) | turn s  = s {whitepieces = findpieces (board s) True}
+updatepieces s (o,d)           = s {blackpieces = findpieces (board s) False}
 
 --TODO probably a better way to do this
 updatecastle :: State -> Move -> State
@@ -163,3 +169,20 @@ existsblackking b = isJust $ findpiece b (Just (Piece King False))
 
 existswhiteking :: Board -> Bool
 existswhiteking b = isJust $ findpiece b (Just (Piece King True))
+
+
+
+
+
+
+-- returns list of positions that have a piece for a given side, should only be called at init
+findpieces :: Board -> Turn -> [Position]
+findpieces b t = findIndicesR (getcolor) b
+
+
+
+
+
+
+
+--comment

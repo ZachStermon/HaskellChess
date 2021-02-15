@@ -20,8 +20,10 @@ type Turn = Bool
 data State = State { turn :: Bool,
                      board :: Board,
                      history :: [Move],
+                     whitepieces :: [Position],
+                     blackpieces :: [Position],
                      wl :: Bool,
                      ws :: Bool,
                      bl :: Bool,
                      bs :: Bool
-                    } deriving (Show, Eq)
+                    } deriving (Eq)

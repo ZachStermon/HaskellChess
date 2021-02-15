@@ -1,11 +1,4 @@
-module Weights
-( weightedpawnwhite, weightedpawnblack,
-weightedknightwhite, weightedknightblack,
-weightedbishopwhite, weightedbishopblack,
-weightedrookwhite, weightedrookblack,
-weightedqueenwhite, weightedqueenblack,
-weightedkingwhite, weightedkingblack,
-) where
+module Weights where
 
 
 weightedpawnwhite =    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,

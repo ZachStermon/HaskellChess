@@ -1,9 +1,13 @@
 module GameTree where
 import Types
+import Boards
 import Chess
 
-data Tree = Node Move Board [Tree] deriving (Show, Eq)
 
-gettree :: State -> [Move] -> Tree
-gettree s x       = Node x () []
-gettree s (x:xs)  = Node x (domove )
+
+translate :: String -> Move
+translate ""  = error("Empty")
+translate " " = error("Empty")
+translate " "
+
+s = makestate initial True
