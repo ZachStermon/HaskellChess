@@ -1,5 +1,6 @@
 import Chess
 import AI
+import Evaluator
 import Types
 import Printing
 import Movechecker
@@ -61,15 +62,12 @@ start = do
 --HUMAN ONLY GAME
 --This function is played repeatedly for each players move
 play :: State -> IO()
-play s | turn s = do
+play s           = do
                 printboard (board s)
-                putStrLn "It Is Now Whites Turn,"
-                putStrLn "Enter valid move (a1b2): "
-                move <- getLine
-                movement s (stringtomove(move))
-play s          = do
-                printboard (board s)
-                putStrLn "It Is Now Blacks Turn, "
+                if turn s then putStrLn "It Is Now Whites Turn," else putStrLn "It Is Now Blacks Turn, "
+
+                putStrLn "Current evaluation: "
+                putStrLn (show (staticeval s))
                 putStrLn "Enter valid move (a1b2): "
                 move <- getLine
                 movement s (stringtomove(move))
@@ -104,32 +102,40 @@ playbotw s | turn s = do
                 printboard (board s)
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Whites Turn,"
+                      putStrLn "Current evaluation: "
+                      putStrLn (show (staticeval s))
                       putStrLn "Enter valid move (a1b2): "
                       move <- getLine
                       movementbotw s (stringtomove(move))
 --turn is black
 playbotw s         = do
                 printboard (board s)
+                putStrLn "Current evaluation: "
+                putStrLn (show (staticeval s))
                 if gameover s then reset' True else do
                       let m = findbestmove s
-                      playbotw (domove s m)
                       putStrLn "Bot played:"
                       putStrLn (show m)
+                      playbotw (domove s m)
 
 playbotb :: State -> IO()
 --turn is white
 playbotb s | turn s = do
                 printboard (board s)
+                putStrLn "Current evaluation: "
+                putStrLn (show (staticeval s))
                 if gameover s then reset' True else do
                       let m = findbestmove s
-                      playbotb (domove s m)
                       putStrLn "Bot played:"
                       putStrLn (show m)
+                      playbotb (domove s m)
 --turn is black
 playbotb s           = do
                 printboard (board s)
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Blacks Turn,"
+                      putStrLn "Current evaluation: "
+                      putStrLn (show (staticeval s))
                       putStrLn "Enter valid move (a1b2): "
                       move <- getLine
                       movementbotb s (stringtomove(move))

@@ -40,6 +40,18 @@ getspot 'q' = Just (Piece Queen False)
 getspot 'k' = Just (Piece King False)
 getspot  _  = Nothing
 
+extendfen :: String -> String
+extendfen ('8':xs) = "--------" ++ extendfen xs
+extendfen ('7':xs) = "-------" ++ extendfen xs
+extendfen ('6':xs) = "------" ++ extendfen xs
+extendfen ('5':xs) = "-----" ++ extendfen xs
+extendfen ('4':xs) = "----" ++ extendfen xs
+extendfen ('3':xs) = "---" ++ extendfen xs
+extendfen ('2':xs) = "--" ++ extendfen xs
+extendfen ('1':xs) = "-" ++ extendfen xs
+extendfen ('/':xs) = extendfen xs
+extendfen (x:xs)   = [x] ++ extendfen xs
+extendfen s = s
 
 getboard :: String -> Board
 getboard string = fromList $ map getspot string

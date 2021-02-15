@@ -6,11 +6,10 @@ module AI
 --Imports
 import Chess
 import Types
-import Weights
 import Movechecker
 import Data.List
 import Data.Sequence hiding (null, sortBy, filter)
-import Data.Maybe
+import Evaluator
 
 --FOR TESTING ONLY
 import Boards
@@ -21,56 +20,12 @@ m3 = makestate mateinthree True
 initi = makestate initial True
 
 --declarations
-maxdepth = 3
+maxdepth = 4
 minval = -12345
 maxval = 12345
 
 
 
-
---staticeval is used for evaluating the static board snapshot, diiferent pieces have different values and added weights make certain pieces worth more in different areas of the board.
--- stalemate cannot happen in testing, kings can be captured
-staticeval :: State -> Double
-staticeval (State{board=b})  = staticeval' b 0
-
-staticeval' :: Board -> Int -> Double
-staticeval' b 63 = (value spot) + (weightedposition spot 63)
-  where spot = index b 63
-staticeval' b n  = (value spot) + (weightedposition spot n) + (staticeval' b (n+1))
-  where spot = index b n
-
-
---this is a helper for the board weights(which can be seen in weights.hs)
-weightedposition :: Spot -> Int -> Double
-weightedposition Nothing                     n   = 0
-weightedposition (Just (Piece Pawn True))    n   =      weightedpawnwhite   !! n
-weightedposition (Just (Piece Knight True))  n   =      weightedknightwhite !! n
-weightedposition (Just (Piece Bishop True))  n   =      weightedbishopwhite !! n
-weightedposition (Just (Piece Rook True))    n   =      weightedrookwhite   !! n
-weightedposition (Just (Piece Queen True))   n   =      weightedqueenwhite  !! n
-weightedposition (Just (Piece King True))    n   =      weightedkingwhite   !! n
-weightedposition (Just (Piece Pawn False))   n   = -1 * weightedpawnblack   !! n
-weightedposition (Just (Piece Knight False)) n   = -1 * weightedknightblack !! n
-weightedposition (Just (Piece Bishop False)) n   = -1 * weightedbishopblack !! n
-weightedposition (Just (Piece Rook False))   n   = -1 * weightedrookblack   !! n
-weightedposition (Just (Piece Queen False))  n   = -1 * weightedqueenblack  !! n
-weightedposition (Just (Piece King False))   n   = -1 * weightedkingblack   !! n
-
---these are the core values for the pieces on the board.
-value :: Spot -> Double
-value Nothing                        = 0
-value (Just (Piece Pawn True))       = 10.2
-value (Just (Piece Knight True))     = 30.5
-value (Just (Piece Bishop True))     = 33.3
-value (Just (Piece Rook True))       = 56.3
-value (Just (Piece Queen True))      = 95.1
-value (Just (Piece King True))       = 9999.9
-value (Just (Piece Pawn False))      = -10.2
-value (Just (Piece Knight False))    = -30.5
-value (Just (Piece Bishop False))    = -33.3
-value (Just (Piece Rook False))      = -56.3
-value (Just (Piece Queen False))     = -95.1
-value (Just (Piece King False))      = -9999.9
 
 --looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
 findbestmove :: State -> Move
@@ -120,19 +75,22 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
 
 
 
+-- lookup table that remebers a specific boards evaluation
+type Table = [([Move], Double)]
 
-data Table = Table [([Move], Double)] deriving (Show, Eq)
+lookuptable :: Table -> [Move] -> Bool
+lookuptable t m = m `elem` (map fst t)
 
--- lookup :: lookuptable -> [Move] -> Maybe Double
--- lookup t m = if m `elem` (map fst t) then Just ((map fst t))
+geteval :: Table -> [Move] -> Int -> Double
+geteval t m n = if fst (t!!n) == m then snd (t!!n) else geteval t m (n+1)
 
-
-
-
-
-
+addtotable :: Table -> State -> Table
+addtotable t s = ((history s), (staticeval s)):t
 
 
+
+
+-- infinite rose tree of all possible games
 listtrees :: State -> [Move] -> [GameTree]
 listtrees s []      = [makenode s []]
 listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state 0))] ++ listtrees s xs
@@ -152,10 +110,9 @@ data GameTree = GameTree { state :: State,
 getnode :: GameTree -> GameTree
 getnode g = g{children = []}
 
--- getchildnodes :: GameTree -> GameTree
--- getchildnodes g= g{children = (\x -> )}
+getchildnodes :: GameTree -> [GameTree]
+getchildnodes g = map (\x -> getnode x) (children g)
 
-gametree = maketree initi
 
 instance Show State where
   show s = boardtostring (board s) ++ show (turn s) ++ "\n" ++ show (history s) ++ "\n"

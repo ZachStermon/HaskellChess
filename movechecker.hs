@@ -27,14 +27,14 @@ getpawnmoves :: State -> Position -> [Move]
 getpawnmoves (State {board = b, turn = False}) p =
   let m1 = if isNothing (index b (p + 8)) then [(p,p+8)] else []
       m2 = if row p == 1 && isNothing (index b (p+8)) && isNothing (index b (p+16)) then (p,p+16):m1 else m1
-      m3 = if (isenemy b (p+7) False) then (p,p+7):m2 else m2
-      m4 = if (isenemy b (p+9) False) then (p,p+9):m3 else m3
+      m3 = if col p /= 0 && (isenemy b (p+7) False) then (p,p+7):m2 else m2
+      m4 = if col p /= 0 && (isenemy b (p+9) False) then (p,p+9):m3 else m3
   in m4
 getpawnmoves (State {board = b, turn = True}) p =
   let m1 = if isNothing (index b (p-8)) then [(p,p-8)] else []
       m2 = if row p == 6 && isNothing (index b (p-8)) && isNothing (index b (p-16)) then (p,p-16):m1 else m1
-      m3 = if (isenemy b (p-7) True) then (p,p-7):m2 else m2
-      m4 = if (isenemy b (p-9) True) then (p,p-9):m3 else m3
+      m3 = if col p /= 7 && (isenemy b (p-7) True) then (p,p-7):m2 else m2
+      m4 = if col p /= 7 && (isenemy b (p-9) True) then (p,p-9):m3 else m3
   in m4
 
 
