@@ -65,7 +65,6 @@ play :: State -> IO()
 play s           = do
                 printboard (board s)
                 if turn s then putStrLn "It Is Now Whites Turn," else putStrLn "It Is Now Blacks Turn, "
-
                 putStrLn "Current evaluation: "
                 putStrLn (show (staticeval s))
                 putStrLn "Enter valid move (a1b2): "

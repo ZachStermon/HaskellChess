@@ -6,7 +6,6 @@ module Chess
 , inrange
 , makestate
 , getcolor
-, premove
 , findpiece
 , updateturn
 , isenemy
@@ -19,8 +18,7 @@ import Printing
 import Data.Sequence
 import Data.Maybe
 
---FOR TESTING ONLY
-import Boards
+
 
 {-
 board representation is a single vector:

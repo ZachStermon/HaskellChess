@@ -29,7 +29,7 @@ maxval = 12345
 
 --looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
 findbestmove :: State -> Move
-findbestmove s = snd . head $ minimax s (getmoves s) maxdepth
+findbestmove s = snd $ minimax s (getmoves s) maxdepth
 
 
 
@@ -44,7 +44,7 @@ sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
 
 
 --this is essentially a macro to help testing
-test :: Board -> Turn -> Int -> [(Int, Move)]
+test :: Board -> Turn -> Int -> (Int, Move)
 test b t d = minimax state (filter (validmove state) $ getmoves state) d
   where state = (makestate b t)
 
@@ -58,16 +58,18 @@ printboard s = putStr(boardtostring (board s))
 
 
 --minimax is the heart of the "AI" it looks at every possible board state up to a specified depth and will attempt to find a checkmate when possible
-minimax :: State -> [Move] -> Int -> [(Int, Move)]
-minimax s ms 0     = sortmoves (turn s) $ map (\m -> (staticeval (domove s m), m)) ms
-minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
-    where checkmoves m =
+minimax :: State -> [Move] -> Int -> (Int, Move)
+minimax s ms 0     | turn s    = maximum (map (\m -> (staticeval (domove s m), m)) ms)
+                   | otherwise = minimum (map (\m -> (staticeval (domove s m), m)) ms)
+minimax s ms depth = minormax $ (map checkmoves ms)
+    where minormax = if turn s then maximum else minimum
+          checkmoves m =
             let sign = if turn s then id else (0 -)
                 newstate = domove s m
-                newmoves = filter (notcheckmove newstate) $ getmoves newstate
+                newmoves = getmoves newstate
             in if null newmoves
                 then if incheck newstate then (sign maxval, m) else (0,m)
-                else (fst . head $ minimax newstate newmoves (depth-1),m)
+                else (fst $ minimax newstate newmoves (depth-1),m)
 
 
 
@@ -76,16 +78,16 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
 
 
 -- lookup table that remebers a specific boards evaluation
-type Table = [([Move], Int)]
+type Table = [(Board, Int)]
 
-lookuptable :: Table -> [Move] -> Bool
+lookuptable :: Table -> Board -> Bool
 lookuptable t m = m `elem` (map fst t)
 
-geteval :: Table -> [Move] -> Int -> Int
+geteval :: Table -> Board -> Int -> Int
 geteval t m n = if fst (t!!n) == m then snd (t!!n) else geteval t m (n+1)
 
 addtotable :: Table -> State -> Table
-addtotable t s = ((history s), (staticeval s)):t
+addtotable t s = ((board s), (staticeval s)):t
 
 
 

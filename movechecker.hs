@@ -7,7 +7,6 @@ module Movechecker
 , notabletomove
 , attacked
 , gameover
-, notcheckmove
 ) where
 
 --Necessary imports
@@ -134,8 +133,8 @@ getcastlemoves s p =
 
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
-getmoves :: State -> [Move]
-getmoves s | turn s    = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList (whitepieces s))
+getsudomoves :: State -> [Move]
+getsudomoves s | turn s    = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList (whitepieces s))
            | otherwise = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList (blackpieces s))
 
 
@@ -148,12 +147,13 @@ getmovesforspot s (Just (Piece Rook _))   n   = getrookmoves   s n
 getmovesforspot s (Just (Piece Queen _))  n   = getbishopmoves s n ++ getrookmoves   s n
 getmovesforspot s (Just (Piece King _))   n   = getkingmoves   s n ++ getcastlemoves s n
 
-
-
+--gets filtered and legal moves
+getmoves :: State -> [Move]
+getmoves s = Prelude.filter (notcheckmove s) $ getsudomoves s
 
 --TODO updated getmoves function
 validmove :: State -> Move -> Bool
-validmove s (o,d) = (o,d) `elem` getmoves s && notcheckmove s (o,d)
+validmove s (o,d) = (o,d) `elem` getmoves s
 
 notcheckmove :: State -> Move -> Bool
 notcheckmove s m = not $ incheck (updateturn (domove s m))
@@ -169,18 +169,17 @@ gameover s = (checkmate s) || (stalemate s)
 
 --not in check and not able to move
 stalemate :: State -> Bool
-stalemate s = not (incheck s) && notabletomove s (getmoves s)
+stalemate s = not (incheck s) && notabletomove s (getsudomoves s)
 
 --as soon as a valid move is seen (a move that does not put itself in check) False is returned else True
 notabletomove :: State -> [Move] -> Bool
-notabletomove s [] = True
-notabletomove s (x:xs) = if incheck (updateturn (domove s x)) then notabletomove s xs else False
+notabletomove s m = not $ False `elem` (map (\x -> incheck (updateturn (domove s x))) m)
 
 --in check and not able to move
 checkmate :: State -> Bool
-checkmate s = incheck s && notabletomove s (getmoves s)
+checkmate s = incheck s && notabletomove s (getsudomoves s)
 
 --returns true if and only if the square is attacked by the current player
 attacked :: State -> Maybe Int -> Bool
 attacked s Nothing  = False
-attacked s (Just i) = i `elem` (map snd (getmoves s))
+attacked s (Just i) = i `elem` (map snd (getsudomoves s))
