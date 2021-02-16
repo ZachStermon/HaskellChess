@@ -34,7 +34,7 @@ findbestmove s = snd . head $ minimax s (getmoves s) maxdepth
 
 
 --helper function forsotring the list of moves and values.
-sortmoves :: Bool -> [(Double, Move)] -> [(Double, Move)]
+sortmoves :: Bool -> [(Int, Move)] -> [(Int, Move)]
 sortmoves True  = sortBy (\x y -> (fst y) `compare` (fst x))
 sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
 
@@ -44,7 +44,7 @@ sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
 
 
 --this is essentially a macro to help testing
-test :: Board -> Turn -> Int -> [(Double, Move)]
+test :: Board -> Turn -> Int -> [(Int, Move)]
 test b t d = minimax state (filter (validmove state) $ getmoves state) d
   where state = (makestate b t)
 
@@ -58,7 +58,7 @@ printboard s = putStr(boardtostring (board s))
 
 
 --minimax is the heart of the "AI" it looks at every possible board state up to a specified depth and will attempt to find a checkmate when possible
-minimax :: State -> [Move] -> Int -> [(Double, Move)]
+minimax :: State -> [Move] -> Int -> [(Int, Move)]
 minimax s ms 0     = sortmoves (turn s) $ map (\m -> (staticeval (domove s m), m)) ms
 minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
     where checkmoves m =
@@ -66,7 +66,7 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
                 newstate = domove s m
                 newmoves = filter (notcheckmove newstate) $ getmoves newstate
             in if null newmoves
-                then if incheck newstate then (sign maxval, m) else (0.0,m)
+                then if incheck newstate then (sign maxval, m) else (0,m)
                 else (fst . head $ minimax newstate newmoves (depth-1),m)
 
 
@@ -76,12 +76,12 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
 
 
 -- lookup table that remebers a specific boards evaluation
-type Table = [([Move], Double)]
+type Table = [([Move], Int)]
 
 lookuptable :: Table -> [Move] -> Bool
 lookuptable t m = m `elem` (map fst t)
 
-geteval :: Table -> [Move] -> Int -> Double
+geteval :: Table -> [Move] -> Int -> Int
 geteval t m n = if fst (t!!n) == m then snd (t!!n) else geteval t m (n+1)
 
 addtotable :: Table -> State -> Table
@@ -103,7 +103,7 @@ makenode :: State -> [GameTree] -> GameTree
 makenode s n = GameTree{state = s, eval = (staticeval s), children = n}
 
 data GameTree = GameTree { state :: State,
-                           eval :: Double,
+                           eval :: Int,
                            children :: [GameTree]
                           } deriving (Show, Eq)
 
