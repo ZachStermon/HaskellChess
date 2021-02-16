@@ -29,7 +29,7 @@ maxval = 12345
 
 --looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
 findbestmove :: State -> Move
-findbestmove s = snd . head $ minimax s (getmoves s 0) maxdepth
+findbestmove s = snd . head $ minimax s (getmoves s) maxdepth
 
 
 
@@ -45,7 +45,7 @@ sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
 
 --this is essentially a macro to help testing
 test :: Board -> Turn -> Int -> [(Double, Move)]
-test b t d = minimax state (filter (validmove state) $ getmoves state 0) d
+test b t d = minimax state (filter (validmove state) $ getmoves state) d
   where state = (makestate b t)
 
 --same as above, like a macro for testing.
@@ -64,7 +64,7 @@ minimax s ms depth = sortmoves (turn s) (map checkmoves ms)
     where checkmoves m =
             let sign = if turn s then id else (0 -)
                 newstate = domove s m
-                newmoves = filter (notcheckmove newstate) $ getmoves newstate 0
+                newmoves = filter (notcheckmove newstate) $ getmoves newstate
             in if null newmoves
                 then if incheck newstate then (sign maxval, m) else (0.0,m)
                 else (fst . head $ minimax newstate newmoves (depth-1),m)
@@ -93,11 +93,11 @@ addtotable t s = ((history s), (staticeval s)):t
 -- infinite rose tree of all possible games
 listtrees :: State -> [Move] -> [GameTree]
 listtrees s []      = [makenode s []]
-listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state 0))] ++ listtrees s xs
+listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state))] ++ listtrees s xs
   where state = domove s x
 
 maketree :: State -> GameTree
-maketree s = makenode s (listtrees s (getmoves s 0))
+maketree s = makenode s (listtrees s (getmoves s))
 
 makenode :: State -> [GameTree] -> GameTree
 makenode s n = GameTree{state = s, eval = (staticeval s), children = n}

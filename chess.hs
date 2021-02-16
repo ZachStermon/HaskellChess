@@ -50,7 +50,7 @@ executemove b (o,d) = setspotonboard (setspotonboard b (index b o) d) Nothing o
 --gets the color of a piece and returns either True for white or False for black.
 getcolor :: Spot -> Bool
 getcolor (Just (Piece _ t)) = t
-getcolor _  = undefined
+getcolor s  = error (show s)
 
 
 --this is a helper function that makes a state out of all of the specified information and stores it for function use.
@@ -68,7 +68,7 @@ makestate b t = State {
 
 --Intermediary between states and premove
 domove :: State -> Move -> State
-domove s m = updatepieces (updatecastle (updateturn (updatehistory (premove s m) m)) m) m
+domove s m = updatecastle (updateturn (updatehistory (premove (updatepieces s m) m) m)) m
 
 
 --update board will update the state board when the board changes.
@@ -84,8 +84,14 @@ updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
 updatepieces :: State -> Move -> State
-updatepieces s (o,d) | turn s  = s {whitepieces = findpieces (board s) True}
-updatepieces s (o,d)           = s {blackpieces = findpieces (board s) False}
+updatepieces s (o,d) | turn s  = if isJust (index (board s) d) && not (getcolor (index (board s) d))
+                                 then   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s),
+                                            blackpieces = deleteAt (findelem d (blackpieces s)) (blackpieces s)}
+                                 else   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s)}
+updatepieces s (o,d)           = if isJust (index (board s) d) && getcolor (index (board s) d)
+                                 then   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
+                                            whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
+                                 else   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
 
 --TODO probably a better way to do this
 updatecastle :: State -> Move -> State
@@ -173,11 +179,14 @@ existswhiteking b = isJust $ findpiece b (Just (Piece King True))
 
 
 
+findelem :: Int -> Seq Int -> Int
+findelem a s =  fromJust (elemIndexL a s)
+
 
 
 -- returns list of positions that have a piece for a given side, should only be called at init
-findpieces :: Board -> Turn -> [Position]
-findpieces b t = findIndicesR (getcolor) b
+findpieces :: Board -> Turn -> Seq Position
+findpieces b t = fromList $ findIndicesR (\x -> if isNothing x then False else getcolor x == t) b
 
 
 
