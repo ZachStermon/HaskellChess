@@ -2,6 +2,7 @@ module Printing
 ( getboard
 , boardtostring
 , stringtomove
+, printboard
 ) where
 
 import Data.Foldable (toList)
@@ -68,3 +69,6 @@ boardtostring b = "\n" ++ "==ABCDEFGH==" ++ "\n" ++ (unlines $ zipWith (++)(zipW
 stringtomove :: String -> Move
 stringtomove s | length s /= 4 = error ("error in stm: " ++ s)
 stringtomove s = (ctr (s!!1) * 8 + ctc (s!!0), ctr (s!!3) * 8 + ctc (s!!2))
+
+printboard :: State -> IO()
+printboard s = putStr(boardtostring (board s))

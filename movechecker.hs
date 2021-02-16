@@ -134,9 +134,7 @@ getcastlemoves s p =
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
 getsudomoves :: State -> [Move]
-getsudomoves s | turn s    = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList (whitepieces s))
-           | otherwise = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList (blackpieces s))
-
+getsudomoves s = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList ((if turn s then whitepieces else blackpieces) s))
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Spot -> Position -> [Move]
@@ -165,7 +163,6 @@ incheck s  = attacked (updateturn s) (findpiece (board s) (Just (Piece King (tur
 --returns true if the current player is in checkmate or stalemate
 gameover :: State -> Bool
 gameover s = (checkmate s) || (stalemate s)
-
 
 --not in check and not able to move
 stalemate :: State -> Bool

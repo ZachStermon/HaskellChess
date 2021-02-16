@@ -82,11 +82,11 @@ updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
 updatepieces :: State -> Move -> State
-updatepieces s (o,d) | turn s  = if isJust (index (board s) d) && not (getcolor (index (board s) d))
+updatepieces s (o,d) | turn s  = if moveisanattack s (o,d)
                                  then   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s),
                                             blackpieces = deleteAt (findelem d (blackpieces s)) (blackpieces s)}
                                  else   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s)}
-updatepieces s (o,d)           = if isJust (index (board s) d) && getcolor (index (board s) d)
+updatepieces s (o,d)           = if moveisanattack s (o,d)
                                  then   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
                                             whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
                                  else   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
@@ -129,8 +129,7 @@ premove s m                                                  = updateboard s (ex
 
 --This function handles the promoting of pawns into queens, updates the board with a new queen piece.
 promote :: State -> Move -> State
-promote s (o,d) = updateboard s b
-      where b = setspotonboard (setspotonboard (board s) Nothing o) (Just (Piece Queen (turn s))) d
+promote s (o,d) = updateboard s (setspotonboard (setspotonboard (board s) Nothing o) (Just (Piece Queen (turn s))) d)
 
 --the driver for castling, actually performs the moves to move the pieces.
 docastle :: State -> Move -> State
@@ -187,7 +186,10 @@ findpieces :: Board -> Turn -> Seq Position
 findpieces b t = fromList $ findIndicesR (\x -> if isNothing x then False else getcolor x == t) b
 
 
+moveisanattack :: State -> Move -> Bool
+moveisanattack s (o,d) = isJust (index (board s) d) && getcolor (index (board s) d) /= turn s
 
+-- moveisacheck :: State -> Move -> Bool
 
 
 
