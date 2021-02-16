@@ -1,6 +1,6 @@
 # HaskellChess
 
-This project is an ongoing chess application written entirely in Haskell. The program features effiecient AI using minimax with A/B pruning.
+This project is an ongoing chess application written entirely in Haskell. The program features AI using minimax with A/B pruning.
 
 # Instructions
 
