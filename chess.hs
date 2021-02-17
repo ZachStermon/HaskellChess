@@ -1,14 +1,14 @@
 module Chess
-( domove
+( dmove
 , whitecastle
 , blackcastle
 , notfriendlyfire
 , inrange
-, makestate
 , getcolor
 , findpiece
 , updateturn
 , isenemy
+, findpieces
 ) where
 
 --Imports
@@ -51,22 +51,11 @@ getcolor (Just (Piece _ t)) = t
 getcolor s  = error (show s)
 
 
---this is a helper function that makes a state out of all of the specified information and stores it for function use.
-makestate :: Board -> Turn -> State
-makestate b t = State {
-  board = b,
-  turn = t,
-  history = [],
-  whitepieces = findpieces b True,
-  blackpieces = findpieces b False,
-  wl = True,
-  ws = True,
-  bl = True,
-  bs = True}
+
 
 --Intermediary between states and premove
-domove :: State -> Move -> State
-domove s m = updatecastle (updateturn (updatehistory (premove (updatepieces s m) m) m)) m
+dmove :: State -> Move -> State
+dmove s m = updatecastle (updateturn (updatehistory (premove (updatepieces s m) m) m)) m
 
 
 --update board will update the state board when the board changes.
@@ -90,6 +79,9 @@ updatepieces s (o,d)           = if moveisanattack s (o,d)
                                  then   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
                                             whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
                                  else   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
+
+
+
 
 --TODO probably a better way to do this
 updatecastle :: State -> Move -> State

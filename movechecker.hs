@@ -7,6 +7,9 @@ module Movechecker
 , notabletomove
 , attacked
 , gameover
+, makestate
+, domove
+, getsudomoves
 ) where
 
 --Necessary imports
@@ -134,7 +137,12 @@ getcastlemoves s p =
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
 getsudomoves :: State -> [Move]
+--getsudomoves s = (\n -> getmovesforspot s (index (board s) n) n) =<< (toList ((if turn s then whitepieces else blackpieces) s))
 getsudomoves s = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList ((if turn s then whitepieces else blackpieces) s))
+
+-- getsudomoves :: State -> [Move]
+--getsudomoves s = (\n -> getmovesforspot s (index (board s) n) n) =<< (toList ((if turn s then whitepieces else blackpieces) s))
+-- getsudomoves s = concat $ mapWithIndex (flip $ getmovesforspot s) (board s)
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Spot -> Position -> [Move]
@@ -144,6 +152,7 @@ getmovesforspot s (Just (Piece Bishop _)) n   = getbishopmoves s n
 getmovesforspot s (Just (Piece Rook _))   n   = getrookmoves   s n
 getmovesforspot s (Just (Piece Queen _))  n   = getbishopmoves s n ++ getrookmoves   s n
 getmovesforspot s (Just (Piece King _))   n   = getkingmoves   s n ++ getcastlemoves s n
+getmovesforspot s _   n = []
 
 --gets filtered and legal moves
 getmoves :: State -> [Move]
@@ -179,4 +188,40 @@ checkmate s = incheck s && notabletomove s (getsudomoves s)
 --returns true if and only if the square is attacked by the current player
 attacked :: State -> Maybe Int -> Bool
 attacked s Nothing  = False
-attacked s (Just i) = i `elem` (map snd (getsudomoves s))
+attacked s (Just i) | turn s    = i `elem` (whiteattacks s)
+                    | otherwise = i `elem` (blackattacks s)
+
+updateattacks :: State -> State
+updateattacks s | turn s    = s {whiteattacks = (fromList (map snd  (getsudomoves s))), blackattacks = fromList $ (map snd  (getsudomoves (updateturn s)))}
+                | otherwise = s {whiteattacks = (fromList (map snd  (getsudomoves (updateturn s)))), blackattacks = fromList $ (map snd  (getsudomoves s))}
+
+--this is a helper function that makes a state out of all of the specified information and stores it for function use.
+makestate :: Board -> Turn -> State
+makestate b t = updateattacks State {
+  board = b,
+  turn = t,
+  history = [],
+  whitepieces = findpieces b True,
+  blackpieces = findpieces b False,
+  whiteattacks = empty,
+  blackattacks = empty,
+  wl = True,
+  ws = True,
+  bl = True,
+  bs = True}
+
+domove :: State -> Move -> State
+domove s m = updateattacks (dmove s m)
+
+
+
+
+
+
+
+
+
+
+
+
+  --comment

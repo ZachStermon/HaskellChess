@@ -5,6 +5,7 @@ import Types
 import Weights
 import Data.Sequence
 import Data.Maybe
+
 --staticeval is used for evaluating the static board snapshot, diiferent pieces have different values and added weights make certain pieces worth more in different areas of the board.
 -- stalemate cannot happen in testing, kings can be captured
 staticeval :: State -> Int
