@@ -52,11 +52,11 @@ getrookmoves (State {board = b, turn = t}) p    =
                          | isenemy b pos t      = (p,pos):acc
                          | isNothing (index b pos)   = checkdown ((p,pos):acc) (pos+8)
                          | otherwise            = acc
-      checkleft acc pos  | (pos `mod` 8) == 7   = acc
+      checkleft acc pos  | col pos == 7   = acc
                          | isenemy b pos t      = (p,pos):acc
                          | isNothing (index b pos)   = checkleft ((p,pos):acc) (pos-1)
                          | otherwise            = acc
-      checkright acc pos | (pos `mod` 8) == 0   = acc
+      checkright acc pos | col pos == 0   = acc
                          | isenemy b pos t      = (p,pos):acc
                          | isNothing (index b pos)   = checkright ((p,pos):acc) (pos+1)
                          | otherwise            = acc
@@ -137,12 +137,8 @@ getcastlemoves s p =
 --gets a list of moves for the current board, pass in zero to test the entire board
 --returns moves which might put the player in check
 getsudomoves :: State -> [Move]
---getsudomoves s = (\n -> getmovesforspot s (index (board s) n) n) =<< (toList ((if turn s then whitepieces else blackpieces) s))
-getsudomoves s = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList ((if turn s then whitepieces else blackpieces) s))
-
--- getsudomoves :: State -> [Move]
---getsudomoves s = (\n -> getmovesforspot s (index (board s) n) n) =<< (toList ((if turn s then whitepieces else blackpieces) s))
--- getsudomoves s = concat $ mapWithIndex (flip $ getmovesforspot s) (board s)
+--getsudomoves s = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList ((if turn s then whitepieces else blackpieces) s))
+getsudomoves s = (\n -> getmovesforspot s (index (board s) n) n) =<< (toList ((if turn s then whitepieces else blackpieces) s))
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Spot -> Position -> [Move]
@@ -167,7 +163,7 @@ notcheckmove s m = not $ incheck (updateturn (domove s m))
 
 --returns true if and only if the current sides king can be attacked by an enemy piece
 incheck :: State -> Bool
-incheck s  = attacked (updateturn s) (findpiece (board s) (Just (Piece King (turn s))))
+incheck s  = attacked (updateturn s) (findmaybe (board s) (Just (Piece King (turn s))))
 
 --returns true if the current player is in checkmate or stalemate
 gameover :: State -> Bool
@@ -215,7 +211,9 @@ domove s m = updateattacks (dmove s m)
 
 
 
-
+--helper function forsorting the list of moves and values.
+-- sortmoves :: State -> [(Int, Move)] -> [(Int, Move)]
+-- sortmoves s ms = Prelude.filter (moveisanattack s) ms ++ Prelude.filter (not $ moveisanattack s) ms
 
 
 

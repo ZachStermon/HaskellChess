@@ -8,7 +8,6 @@ import Chess
 import Types
 import Movechecker
 import Data.List
-import Data.Sequence hiding (null, sortBy, filter)
 import Evaluator
 
 --FOR TESTING ONLY
@@ -22,7 +21,7 @@ m3v3 = makestate mateinthreev3 True
 initi = makestate initial True
 
 --declarations
-maxdepth = 4
+maxdepth = 5
 minval = -12345
 maxval = 12345
 
@@ -44,10 +43,7 @@ findbestmove s = minimaxwithpruning s (getmoves s) minval maxval maxdepth
 
 
 
---helper function forsotring the list of moves and values.
-sortmoves :: Bool -> [(Int, Move)] -> [(Int, Move)]
-sortmoves True  = sortBy (\x y -> (fst y) `compare` (fst x))
-sortmoves False = sortBy (\x y -> (fst x) `compare` (fst y))
+
 
 
 
@@ -88,7 +84,6 @@ max' (a,b) (c,d) = if a >= c then (a,b) else (c,d)
 minimaxwithpruning :: State -> [Move] -> Int -> Int -> Int -> (Int, Move)
 minimaxwithpruning s [] a b 0     = if incheck s then worstval s else (0,(0,0))
 minimaxwithpruning s ms a b 0     =  ((if turn s then maximum else minimum) $ map (evalonemove s) ms)
-minimaxwithpruning s ms a b depth | notabletomove s (getsudomoves s) = error ("test123")
 minimaxwithpruning s ms a b depth | turn s =
   let stepthrough [] best = best
       stepthrough (m:mz) best =
@@ -107,6 +102,42 @@ minimaxwithpruning s ms a b depth | turn s =
   in  stepthrough ms (worstval s)
 
 
+done :: State -> Int
+done s | turn s     = if incheck s then minval else 0
+       | otherwise  = if incheck s then maxval else 0
+
+--does not evaluate checkmate or stalemate at leaves
+--when depth is zero, return max of static eval and alpha and min of that with beta
+--alpha = best eval for current player so far
+--beta  = best eval for oposing player so far
+--Minimax with alpha-beta pruning
+minimaxalphabeta :: Int -> Int -> Int -> State -> Int
+minimaxalphabeta 0     a b s = a `max` (staticeval s) `min` b
+minimaxalphabeta depth a b s | null moves = done s            --checkmate or stalemate
+                             | otherwise  = recurse a b moves --otherwise call recursive function
+    where moves = getmoves s
+          eval  = staticeval s
+          recurse a b []  = a
+          recurse a b (m:ms) | alpha >= b = alpha
+                             | otherwise  = recurse alpha b ms
+                             where alpha = minimaxalphabeta (depth-1) (-b) (-a) (domove s m)
+
+
+foreach :: State -> [(Int, Move)]
+foreach s = Prelude.zip (map (minimaxalphabeta maxdepth (-99999) (99999)) (map (domove s) moves)) moves
+  where moves = getmoves s
+
+nstat :: State -> Int
+nstat s | turn s    = staticeval s
+        | otherwise = -staticeval s
+
+
+
+
+
+
+
+
 
 
 --           eval move  a     b
@@ -118,20 +149,7 @@ type Mini = (Int, Move, Int , Int)
 hide' (a,b,c,d) = (a,b)
 
 
--- evalsomemoves :: State -> [Move] -> Int -> Int -> (Int,Move) -> Int -> (Int,Move)
--- evalsomemoves s (m:ms) a b best depth | Prelude.length (m:ms) == 1 = func best eval
---                                       | otherwise  = if tester then best
---                                                      else evalsomemoves s ms alpha beta (func best eval) depth
---                     where eval      = if null nextmoves
---                                       then if incheck nextstate then (if turn nextstate then minval else maxval,m) else (0,m)
---                                       else minimaxwithpruning nextstate nextmoves alpha beta (depth-1)
---                           nextstate = domove s m
---                           nextmoves = getmoves nextstate
---                           alpha     = if turn nextstate then max a (fst eval) else a
---                           beta      = if turn nextstate then b else min b (fst eval)
---                           tester    = beta <= alpha
---                           func      = if turn s then max' else min'
--- evalsomemoves s m a b best depth = error(show s)
+
 
 
 
@@ -159,19 +177,7 @@ endgame :: State -> Int
 endgame s   | incheck s = if turn s then maxval else minval
             | otherwise = 0
 
---minimax is the heart of the "AI" it looks at every possible board state up to a specified depth and will attempt to find a checkmate when possible
--- minimax :: Table -> State -> [Move] -> Int -> (Int, Move, Table)
--- minimax t s ms 0 | turn s    = maximum' (map (\m -> (staticeval (domove s m), m, t)) ms)
---                  | otherwise = minimum' (map (\m -> (staticeval (domove s m), m, t)) ms)
--- minimax t s ms depth = minormax $ (map checkmoves ms)
---     where minormax = if turn s then maximum' else minimum'
---           checkmoves m =
---             let sign = if turn s then id else (0 -)
---                 newstate = domove s m
---                 newmoves = getmoves newstate
---             in if null newmoves
---                 then if incheck newstate then (sign maxval,m,t) else (0,m,t)
---                 else (fst' $ minimax t newstate newmoves (depth-1),m,t)
+
 
 fst'  (a,b,c,d) = a
 snd'  (a,b,c,d) = b
@@ -228,5 +234,101 @@ getchildnodes g = map (\x -> getnode x) (children g)
 
 instance Show State where
   show s = boardtostring (board s) ++ show (turn s) ++ "\n" ++ show (history s) ++ "\n"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--minimax is the heart of the "AI" it looks at every possible board state up to a specified depth and will attempt to find a checkmate when possible
+-- minimax :: Table -> State -> [Move] -> Int -> (Int, Move, Table)
+-- minimax t s ms 0 | turn s    = maximum' (map (\m -> (staticeval (domove s m), m, t)) ms)
+--                  | otherwise = minimum' (map (\m -> (staticeval (domove s m), m, t)) ms)
+-- minimax t s ms depth = minormax $ (map checkmoves ms)
+--     where minormax = if turn s then maximum' else minimum'
+--           checkmoves m =
+--             let sign = if turn s then id else (0 -)
+--                 newstate = domove s m
+--                 newmoves = getmoves newstate
+--             in if null newmoves
+--                 then if incheck newstate then (sign maxval,m,t) else (0,m,t)
+--                 else (fst' $ minimax t newstate newmoves (depth-1),m,t)
+
+
+
+
+-- evalsomemoves :: State -> [Move] -> Int -> Int -> (Int,Move) -> Int -> (Int,Move)
+-- evalsomemoves s (m:ms) a b best depth | Prelude.length (m:ms) == 1 = func best eval
+--                                       | otherwise  = if tester then best
+--                                                      else evalsomemoves s ms alpha beta (func best eval) depth
+--                     where eval      = if null nextmoves
+--                                       then if incheck nextstate then (if turn nextstate then minval else maxval,m) else (0,m)
+--                                       else minimaxwithpruning nextstate nextmoves alpha beta (depth-1)
+--                           nextstate = domove s m
+--                           nextmoves = getmoves nextstate
+--                           alpha     = if turn nextstate then max a (fst eval) else a
+--                           beta      = if turn nextstate then b else min b (fst eval)
+--                           tester    = beta <= alpha
+--                           func      = if turn s then max' else min'
+-- evalsomemoves s m a b best depth = error(show s)
+
+
+
+
+
+
+
+
+
+
+-- minimaxwithpruning :: State -> [Move] -> Int -> Int -> Int -> (Int, Move)
+-- minimaxwithpruning s [] a b 0     = if incheck s then worstval s else (0,(0,0))
+-- minimaxwithpruning s ms a b 0     =  ((if turn s then maximum else minimum) $ map (evalonemove s) ms)
+-- minimaxwithpruning s ms a b depth | turn s =
+--   let stepthrough [] best = best
+--       stepthrough (m:mz) best =
+--         let newstate = domove s m
+--             (c1,c2)  = minimaxwithpruning newstate (getmoves newstate) (fst best) b (depth-1)
+--             newbest  = max' best (c1,m)
+--         in if b <= (fst newbest) then best else stepthrough mz newbest
+--   in  stepthrough ms (worstval s)
+--                                 | otherwise =
+--   let stepthrough [] best = best
+--       stepthrough (m:mz) best =
+--         let newstate = domove s m
+--             (c1,c2)  = minimaxwithpruning newstate (getmoves newstate) a (fst best) (depth-1)
+--             newbest  = min' best (c1,m)
+--         in if (fst newbest) <= a then best else stepthrough mz newbest
+--   in  stepthrough ms (worstval s)
+
+
+
+
+
+
+
 
 -- comment

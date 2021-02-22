@@ -5,10 +5,11 @@ module Chess
 , notfriendlyfire
 , inrange
 , getcolor
-, findpiece
+, findmaybe
 , updateturn
 , isenemy
 , findpieces
+, moveisanattack
 ) where
 
 --Imports
@@ -55,7 +56,7 @@ getcolor s  = error (show s)
 
 --Intermediary between states and premove
 dmove :: State -> Move -> State
-dmove s m = updatecastle (updateturn (updatehistory (premove (updatepieces s m) m) m)) m
+dmove s m = updatecastle (updateturn (updatehistory (updatepieces (premove s m) m) m)) m
 
 
 --update board will update the state board when the board changes.
@@ -70,17 +71,17 @@ updatehistory state m = state {history = (history state) ++ [m]}
 updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
 
+
+
 updatepieces :: State -> Move -> State
-updatepieces s (o,d) | turn s  = if moveisanattack s (o,d)
-                                 then   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s),
-                                            blackpieces = deleteAt (findelem d (blackpieces s)) (blackpieces s)}
-                                 else   s {whitepieces = update (findelem o (whitepieces s)) d (whitepieces s)}
-updatepieces s (o,d)           = if moveisanattack s (o,d)
-                                 then   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
-                                            whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
-                                 else   s {blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
-
-
+updatepieces s (o,d) | turn s    = if isNothing $ elemIndexL d (blackpieces s)
+                                      then s{whitepieces = update (findelem o (whitepieces s)) d (whitepieces s)}
+                                      else s{whitepieces = update (findelem o (whitepieces s)) d (whitepieces s),
+                                      blackpieces = deleteAt (findelem d (blackpieces s)) (blackpieces s)}
+                     | otherwise = if isNothing $ elemIndexL d (whitepieces s)
+                                      then s{blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
+                                      else s{blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
+                                      whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
 
 
 --TODO probably a better way to do this
@@ -148,9 +149,9 @@ blackcastle s _      = False
 --RIGHT DIAGONAL / mod 7
 
 
---returns first instance of piece given
-findpiece :: Board -> Spot -> Maybe Int
-findpiece b sp = elemIndexL sp b
+--returns first instance of element given
+findmaybe :: (Eq a) => Seq a -> a -> Maybe Int
+findmaybe b sp = elemIndexL sp b
 
 
 --checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
@@ -160,16 +161,16 @@ isenemy b i t = isJust (index b i) && (getcolor $ index b i) /= t
 
 -- ?? TODO?
 existsblackking :: Board -> Bool
-existsblackking b = isJust $ findpiece b (Just (Piece King False))
+existsblackking b = isJust $ findmaybe b (Just (Piece King False))
 
 existswhiteking :: Board -> Bool
-existswhiteking b = isJust $ findpiece b (Just (Piece King True))
+existswhiteking b = isJust $ findmaybe b (Just (Piece King True))
 
 
 
 
 findelem :: Int -> Seq Int -> Int
-findelem a s =  fromJust (elemIndexL a s)
+findelem a s =  fromJust (findmaybe s a)
 
 
 
