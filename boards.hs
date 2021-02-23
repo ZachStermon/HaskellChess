@@ -15,3 +15,5 @@ mateintwov3    = getboard ("------k------ppp----b---p-q----------K------P---r---
 mateinthreev4  = getboard ("-------------B-----------K--------------------------R---k-------")
 mateinfour     = getboard ("-------------B-----------K-----------------R------------k-------")
 initial        = getboard ("rnbqkbnrpppppppp--------------------------------PPPPPPPPRNBQKBNR")
+
+rookmate = getboard $ "------k-R-------------------K-----------------------------------"

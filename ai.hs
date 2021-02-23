@@ -20,8 +20,10 @@ m3v2 = makestate mateinthreev2 True
 m3v3 = makestate mateinthreev3 True
 initi = makestate initial True
 
+rookmate1 = makestate rookmate True
+
 --declarations
-maxdepth = 3
+maxdepth = 5
 minval = -12345
 maxval = 12345
 
@@ -112,19 +114,47 @@ done s | turn s     = if incheck s then minval else 0
 --beta  = best eval for oposing player so far
 --Minimax with alpha-beta pruning
 minimaxalphabeta :: Int -> Int -> Int -> State -> Int
-minimaxalphabeta 0     a b s = a `max` (staticeval s) `min` b
-minimaxalphabeta depth a b s | null moves = done s            --checkmate or stalemate
+minimaxalphabeta 0     a b s = a `max` ((if turn s then id else (0-)) (staticeval s)) `min` b
+minimaxalphabeta depth a b s | null moves = (if turn s then id else (0-)) (done s )           --checkmate or stalemate
                              | otherwise  = recurse a b moves --otherwise call recursive function
     where moves = getmoves s
-          eval  = staticeval s
           recurse a b []  = a
           recurse a b (m:ms) | alpha >= b = alpha
-                             | otherwise  = recurse alpha b ms
-                             where alpha = minimaxalphabeta (depth-1) (-b) (-a) (domove s m)
+                             | otherwise = recurse alpha b ms
+                             where alpha = a `max` (-minimaxalphabeta (depth-1) (-b) (-a) (domove s m))
 
+--sortBy (\x y -> compare (staticeval (domove s x)) (staticeval (domove s y))) $
+
+
+negamax :: State -> [Move] -> Int -> Int -> Int -> (Int, [Move])
+negamax s h 0 a b = (a `max` ((if turn s then id else (0-)) (staticeval s)) `min` b,h)
+negamax s h d a b | null moves =  ((if turn s then id else (0-)) (done s),h)
+                  | otherwise = recurse (a,h) (b,h) moves
+                  where moves = sortBy (\x y -> compare (staticeval (domove s x)) (staticeval (domove s y))) $ getmoves s
+                        recurse (a,as) (b,bs) [] = (a,as)
+                        recurse (a,as) (b,bs) (m:ms) | newalpha >= b = (newalpha, alpha')
+                                                     | otherwise = recurse (newalpha,alpha') (b,bs) ms
+                                                     where (alpha,alphal) = negamax (domove s m) (h++[m]) (d-1) (-b) (-a)
+                                                           (newalpha,alpha') = if a > (-alpha)
+                                                                               then (a,as)
+                                                                               else (-alpha,alphal)
+
+
+
+
+
+
+
+
+
+
+
+
+
+--No need to recompute move
 
 foreach :: State -> [(Int, Move)]
-foreach s = Prelude.zip (map (minimaxalphabeta maxdepth (-99999) (99999)) (map (domove s) moves)) moves
+foreach s = Prelude.zip (map ((0-) . minimaxalphabeta maxdepth (-9999) (9999)) (map (domove s) moves)) moves
   where moves = getmoves s
 
 nstat :: State -> Int
@@ -133,11 +163,9 @@ nstat s | turn s    = staticeval s
 
 
 
-
-
-
-
-
+--helper function for sorting the list of moves and values.
+-- sortmoves :: State -> [(Int, Move)] -> [(Int, Move)]
+-- sortmoves s ms = Data.List.sortBy
 
 
 --           eval move  a     b

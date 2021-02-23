@@ -211,10 +211,6 @@ domove s m = updateattacks (dmove s m)
 
 
 
---helper function forsorting the list of moves and values.
--- sortmoves :: State -> [(Int, Move)] -> [(Int, Move)]
--- sortmoves s ms = Prelude.filter (moveisanattack s) ms ++ Prelude.filter (not $ moveisanattack s) ms
-
 
 
 

@@ -10,7 +10,7 @@ import Data.Foldable (toList)
 --staticeval is used for evaluating the static board snapshot, diiferent pieces have different values and added weights make certain pieces worth more in different areas of the board.
 -- stalemate cannot happen in testing, kings can be captured
 staticeval :: State -> Int
-staticeval (State{board=b})  = sum $ mapWithIndex (\n x -> if isNothing x then 0 else (value x) + (weightedposition x n)) b
+staticeval (State{board=b})  = sum $ mapWithIndex (\n x -> if isNothing x then 0 else (value x)) b -- + (weightedposition x n)
 
 --this is a helper for the board weights(which can be seen in weights.hs)
 weightedposition :: Spot -> Int -> Int
