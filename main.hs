@@ -63,7 +63,7 @@ start = do
 --This function is played repeatedly for each players move
 play :: State -> IO()
 play s           = do
-                printboard (board s)
+                printboard s
                 if turn s then putStrLn "It Is Now Whites Turn," else putStrLn "It Is Now Blacks Turn, "
                 putStrLn "Current evaluation: "
                 putStrLn (show (staticeval s))
@@ -97,8 +97,8 @@ playbotsetup = do
 
 playbotw :: State -> IO()
 --turn is white
-playbotw s | turn s = do
-                printboard (board s)
+playbotw s | turn s           = do
+                printboard s
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Whites Turn,"
                       putStrLn "Current evaluation: "
@@ -107,12 +107,12 @@ playbotw s | turn s = do
                       move <- getLine
                       movementbotw s (stringtomove(move))
 --turn is black
-playbotw s         = do
-                printboard (board s)
+          | otherwise         = do
+                printboard s
                 putStrLn "Current evaluation: "
                 putStrLn (show (staticeval s))
                 if gameover s then reset' True else do
-                      let m = findbestmove s
+                      let m = snd $ findbestmove s
                       putStrLn "Bot played:"
                       putStrLn (show m)
                       playbotw (domove s m)
@@ -120,17 +120,17 @@ playbotw s         = do
 playbotb :: State -> IO()
 --turn is white
 playbotb s | turn s = do
-                printboard (board s)
+                printboard s
                 putStrLn "Current evaluation: "
                 putStrLn (show (staticeval s))
                 if gameover s then reset' True else do
-                      let m = findbestmove s
+                      let m = snd $ findbestmove s
                       putStrLn "Bot played:"
                       putStrLn (show m)
                       playbotb (domove s m)
 --turn is black
-playbotb s           = do
-                printboard (board s)
+          | otherwise  = do
+                printboard s
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Blacks Turn,"
                       putStrLn "Current evaluation: "
@@ -160,9 +160,3 @@ reset' True  = do
 reset' False = do
                 putStrLn "Black wins! Click (Enter) to start a new game"
                 start
-
-
---prints a board to stdout
-printboard :: Board -> IO()
-printboard b = do
-                putStrLn (boardtostring b)

@@ -21,7 +21,7 @@ m3v3 = makestate mateinthreev3 True
 initi = makestate initial True
 
 --declarations
-maxdepth = 5
+maxdepth = 3
 minval = -12345
 maxval = 12345
 
@@ -39,7 +39,7 @@ moveit (s,(_,m)) = (newstate, findbestmove newstate)
 
 --looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
 findbestmove :: State -> (Int, Move)
-findbestmove s = minimaxwithpruning s (getmoves s) minval maxval maxdepth
+findbestmove s = (if turn s then maximum else minimum) $ foreach s
 
 
 
