@@ -260,9 +260,6 @@ getchildnodes g = map (\x -> getnode x) (children g)
 
 
 
-instance Show State where
-  show s = boardtostring (board s) ++ show (turn s) ++ "\n" ++ show (history s) ++ "\n"
-
 
 
 

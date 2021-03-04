@@ -1,24 +1,14 @@
-module Chess
-( dmove
-, whitecastle
-, blackcastle
-, notfriendlyfire
-, inrange
-, getcolor
-, findmaybe
-, updateturn
-, isenemy
-, findpieces
-, moveisanattack
-) where
+module Chess where
 
 --Imports
 import Helpers
 import Types
 import Printing
-import Data.Sequence
 import Data.Maybe
+import Data.Word
+import Data.Bits
 
+import Boards
 
 
 {-
@@ -37,31 +27,116 @@ board representation is a single vector:
 
 
 
---this function sets a specified board position to input
-setspotonboard :: Board -> Spot -> Position -> Board
-setspotonboard b sp num = update num sp b
+-- getbitboard :: BitBoard -> Int -> Word64
+-- getbitboard b a | ((shift 1 a).&.(whitepawns b)) > 0 = whitepawns b
+--                 | ((shift 1 a).&.(blackpawns b)) > 0 = blackpawns b
+--                 | ((shift 1 a).&.(whiterooks b)) > 0 = whiterooks b
+--                 | ((shift 1 a).&.(blackrooks b)) > 0 = blackrooks b
+--
+-- setmove :: BitBoard -> Move -> Word64
+-- setmove bb (o,d) = (((getbitboard bb o) `clearBit` o) `setBit` d)
 
+
+-- clearspot :: BitBoard -> Position -> BitBoard
+-- clearspot bb p = bb { whitepawns   = (whitepawns bb)   `clearBit` n,
+--                       blackpawns   = (blackpawns bb)   `clearBit` n,
+--                       whiteknights = (whiteknights bb) `clearBit` n,
+--                       blackknights = (blackknights bb) `clearBit` n,
+--                       whitebishops = (whitebishops bb) `clearBit` n,
+--                       blackbishops = (blackbishops bb) `clearBit` n,
+--                       whiterooks   = (whiterooks bb)   `clearBit` n,
+--                       blackrooks   = (blackrooks bb)   `clearBit` n,
+--                       whitequeens  = (whitequeens bb)  `clearBit` n,
+--                       blackqueens  = (blackqueens bb)  `clearBit` n,
+--                       whitekings   = (whitekings bb)   `clearBit` n,
+--                       blackkings   = (blackkings bb)   `clearBit` n}
+--                           where n = fromEnum p
+--
+-- setspot :: BitBoard -> Piece -> Position -> BitBoard
+-- setspot bb Void   n = clearspot bb n
+-- setspot bb p      n = changevariable (clearspot bb n) p n
+
+exists :: BitBoard -> Position -> Bool
+exists bb p = testBit (occupied bb) (fromIntegral p)
+
+empty :: BitBoard -> Position -> Bool
+empty bb p = not $ exists bb p
+
+rawmove :: Move -> Word64 -> Word64
+rawmove (o,d) w = (w `clearBit` (fromIntegral o)) `setBit` (fromIntegral d)
 
 --execute move takes a board and a move and will return a new board with the updated move having been played.
-executemove :: Board -> Move -> Board
-executemove b (o,d) = setspotonboard (setspotonboard b (index b o) d) Nothing o
+executemove :: BitBoard -> Move -> BitBoard
+executemove bb (o,d) = b{whitepieces = getwhitepieces b, blackpieces = getblackpieces b, occupied = getoccupied b} where b = movepiece (removepiece bb d) (o,d)
+
+movepiece :: BitBoard -> Move -> BitBoard
+movepiece b@(BitBoard{whitepawns = wp})    (o,d) | testBit wp (fromIntegral o) = b{whitepawns   = rawmove (o,d) wp}
+movepiece b@(BitBoard{whiteknights = wp})  (o,d) | testBit wp (fromIntegral o) = b{whiteknights = rawmove (o,d) wp}
+movepiece b@(BitBoard{whitebishops = wp})  (o,d) | testBit wp (fromIntegral o) = b{whitebishops = rawmove (o,d) wp}
+movepiece b@(BitBoard{whiterooks = wp})    (o,d) | testBit wp (fromIntegral o) = b{whiterooks   = rawmove (o,d) wp}
+movepiece b@(BitBoard{whitequeens = wp})   (o,d) | testBit wp (fromIntegral o) = b{whitequeens  = rawmove (o,d) wp}
+movepiece b@(BitBoard{whitekings = wp})    (o,d) | testBit wp (fromIntegral o) = b{whitekings   = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackpawns = wp})    (o,d) | testBit wp (fromIntegral o) = b{blackpawns   = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackknights = wp})  (o,d) | testBit wp (fromIntegral o) = b{blackknights = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackbishops = wp})  (o,d) | testBit wp (fromIntegral o) = b{blackbishops = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackrooks = wp})    (o,d) | testBit wp (fromIntegral o) = b{blackrooks   = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackqueens = wp})   (o,d) | testBit wp (fromIntegral o) = b{blackqueens  = rawmove (o,d) wp}
+movepiece b@(BitBoard{blackkings = wp})    (o,d) | testBit wp (fromIntegral o) = b{blackkings   = rawmove (o,d) wp}
+movepiece bb  _ = error("bit not set" ++ show bb)
+
+removepiece :: BitBoard -> Position -> BitBoard
+removepiece b@(BitBoard{blackpawns = bp})   p | testBit bp n = b{blackpawns   = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{blackknights = bp}) p | testBit bp n = b{blackknights = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{blackbishops = bp}) p | testBit bp n = b{blackbishops = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{blackrooks = bp})   p | testBit bp n = b{blackrooks   = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{blackqueens = bp})  p | testBit bp n = b{blackqueens  = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{blackkings = bp})   p | testBit bp n = b{blackkings   = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whitepawns = bp})   p | testBit bp n = b{whitepawns   = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whiteknights = bp}) p | testBit bp n = b{whiteknights = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whitebishops = bp}) p | testBit bp n = b{whitebishops = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whiterooks = bp})   p | testBit bp n = b{whiterooks   = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whitequeens = bp})  p | testBit bp n = b{whitequeens  = bp `clearBit` n} where n = fromIntegral p
+removepiece b@(BitBoard{whitekings = bp})   p | testBit bp n = b{whitekings   = bp `clearBit` n} where n = fromIntegral p
+removepiece b _ = b
+
+
+
+
+
+
+
+
+
+
+
+
+-- executemove' :: Side -> Move -> BitBoard -> BitBoard
+-- executemove' t (o,d) bb = clearspot (setspot bb (getspot bb o) d) o
+
+func :: BitBoard -> BitBoard
+func bb = executemove (executemove bb (0,1)) (1,0)
+
+
+
+func' :: Word8 -> Word8
+func' w = toEnum $ fromIntegral w
+
+
+
 
 --gets the color of a piece and returns either True for white or False for black.
-getcolor :: Spot -> Bool
-getcolor (Just (Piece _ t)) = t
-getcolor s  = error (show s)
-
-
+getcolor :: Piece -> Bool
+getcolor p = fromEnum p > 6
 
 
 --Intermediary between states and premove
 dmove :: State -> Move -> State
-dmove s m = updatecastle (updateturn (updatehistory (updatepieces (premove s m) m) m)) m
+dmove s m = updatecastle (updateturn (updatehistory (premove s m) m)) m
 
 
 --update board will update the state board when the board changes.
-updateboard :: State -> Board -> State
-updateboard state b = state {board = b}
+updateboard :: State -> BitBoard -> State
+updateboard state bb = state {board = bb}
 
 --updates the history of the current state.
 updatehistory :: State -> Move -> State
@@ -70,18 +145,6 @@ updatehistory state m = state {history = (history state) ++ [m]}
 --updates the current turn of the state.
 updateturn :: State -> State
 updateturn state = state {turn = not (turn state)}
-
-
-
-updatepieces :: State -> Move -> State
-updatepieces s (o,d) | turn s    = if isNothing $ elemIndexL d (blackpieces s)
-                                      then s{whitepieces = update (findelem o (whitepieces s)) d (whitepieces s)}
-                                      else s{whitepieces = update (findelem o (whitepieces s)) d (whitepieces s),
-                                      blackpieces = deleteAt (findelem d (blackpieces s)) (blackpieces s)}
-                     | otherwise = if isNothing $ elemIndexL d (whitepieces s)
-                                      then s{blackpieces = update (findelem o (blackpieces s)) d (blackpieces s)}
-                                      else s{blackpieces = update (findelem o (blackpieces s)) d (blackpieces s),
-                                      whitepieces = deleteAt (findelem d (whitepieces s)) (whitepieces s)}
 
 
 --TODO probably a better way to do this
@@ -102,8 +165,8 @@ inrange (o,d) = (o >= 0 && o <= 63) && (d >= 0 && d <= 63)
 
 
 --makes sure that the piece being attacked is not the same color, if so notfriendlyfire returns True
-notfriendlyfire :: Board -> Move -> Bool
-notfriendlyfire b (o,d) = isNothing (index b d) || ((getcolor $ index b o) /= (getcolor $ index b d))
+notfriendlyfire :: BitBoard -> Move -> Bool
+notfriendlyfire bb (o,d) = empty bb d || ((getcolor $ getspot bb o) /= (getcolor $ getspot bb d))
 
 
 
@@ -114,15 +177,15 @@ notfriendlyfire b (o,d) = isNothing (index b d) || ((getcolor $ index b o) /= (g
 -- also takes a state object so that it can determine if castling can be done
 -- TODO
 premove :: State -> Move -> State
-premove s (o,d)  | (index (board s) o) == (Just (Piece Pawn True))  = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
-                 | (index (board s) o) == (Just (Piece Pawn False)) = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
-                 | o == 60 || o == 4                         = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
-premove s m                                                  = updateboard s (executemove (board s) m)
+premove s (o,d)  | (getspot (board s) o) == WhitePawn = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
+                 | (getspot (board s) o) == BlackPawn = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
+                 | o == 60 || o == 4                  = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
+premove s m                                           = updateboard s (executemove (board s) m)
 
 
 --This function handles the promoting of pawns into queens, updates the board with a new queen piece.
 promote :: State -> Move -> State
-promote s (o,d) = updateboard s (setspotonboard (setspotonboard (board s) Nothing o) (Just (Piece Queen (turn s))) d)
+promote s (o,d) = updateboard s (changevariable (changevariable (board s) Void o) (if turn s then WhiteQueen else BlackQueen) d)
 
 --the driver for castling, actually performs the moves to move the pieces.
 docastle :: State -> Move -> State
@@ -133,56 +196,31 @@ docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (
 
 --checks for castling on white team.
 whitecastle :: State -> Move -> Bool
-whitecastle s (60, 62) = isNothing (index (board s) 61) && isNothing (index (board s) 62)
-whitecastle s (60, 58) = isNothing (index (board s) 57) && isNothing (index (board s) 58) && isNothing (index (board s) 59)
+whitecastle s (60, 62) = empty (board s) 61 && empty (board s) 62
+whitecastle s (60, 58) = empty (board s) 57 && empty (board s) 58 && empty (board s) 59
 whitecastle s _        = False
 
 
 --checks for castling on black team.
 blackcastle :: State -> Move -> Bool
-blackcastle s (4, 6) = isNothing (index (board s) 5) && isNothing (index (board s) 6)
-blackcastle s (4, 2) = isNothing (index (board s) 1) && isNothing (index (board s) 2) && isNothing (index (board s) 3)
+blackcastle s (4, 6) = empty (board s) 5 && empty (board s) 6
+blackcastle s (4, 2) = empty (board s) 1 && empty (board s) 2 && empty (board s) 3
 blackcastle s _      = False
 
 
---LEFT DIAGONAL \ mod 9
---RIGHT DIAGONAL / mod 7
-
-
---returns first instance of element given
-findmaybe :: (Eq a) => Seq a -> a -> Maybe Int
-findmaybe b sp = elemIndexL sp b
 
 
 --checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
-isenemy :: Board -> Position -> Side -> Bool
-isenemy b i t = isJust (index b i) && (getcolor $ index b i) /= t
+isenemy :: BitBoard -> Position -> Side -> Bool
+isenemy bb i t = exists bb i && (getcolor $ getspot bb i) /= t
 
 
--- ?? TODO?
-existsblackking :: Board -> Bool
-existsblackking b = isJust $ findmaybe b (Just (Piece King False))
-
-existswhiteking :: Board -> Bool
-existswhiteking b = isJust $ findmaybe b (Just (Piece King True))
-
-
-
-
-findelem :: Int -> Seq Int -> Int
-findelem a s =  fromJust (findmaybe s a)
-
-
-
--- returns list of positions that have a piece for a given side, should only be called at init
-findpieces :: Board -> Turn -> Seq Position
-findpieces b t = fromList $ findIndicesR (\x -> if isNothing x then False else getcolor x == t) b
 
 
 moveisanattack :: State -> Move -> Bool
-moveisanattack s (o,d) = isJust (index (board s) d) && getcolor (index (board s) d) /= turn s
+moveisanattack s (o,d) = exists (board s) d
 
--- moveisacheck :: State -> Move -> Bool
+
 
 
 

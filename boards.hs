@@ -1,7 +1,7 @@
 module Boards where
 
 import Printing
-
+import Types
 -- Board States
 staleboard     = getboard ("kr--------r-----------------------------r-------P-------K-------")
 checkmateboard = getboard ("----k------------------------------q---------------PPb-----QKB--")
@@ -15,5 +15,7 @@ mateintwov3    = getboard ("------k------ppp----b---p-q----------K------P---r---
 mateinthreev4  = getboard ("-------------B-----------K--------------------------R---k-------")
 mateinfour     = getboard ("-------------B-----------K-----------------R------------k-------")
 initial        = getboard ("rnbqkbnrpppppppp--------------------------------PPPPPPPPRNBQKBNR")
+rookmate       = getboard $ "------k-R-------------------K-----------------------------------"
 
-rookmate = getboard $ "------k-R-------------------K-----------------------------------"
+
+bbinit         = BitBoard {whitepawns = 71776119061217280, blackpawns = 65280, whiteknights = 4755801206503243776, blackknights = 66, whitebishops = 2594073385365405696, blackbishops = 36, whiterooks = 9295429630892703744, blackrooks = 129, whitequeens = 576460752303423488, blackqueens = 8, whitekings = 1152921504606846976, blackkings = 16, whitepieces = 18446462598732840960, blackpieces = 65535, occupied = 18446462598732906495}
