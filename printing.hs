@@ -8,12 +8,13 @@ module Printing
 , getoccupied
 , getblackpieces
 , getwhitepieces
+, printword
 ) where
 
 
 import Data.Foldable (toList)
 import Data.Sequence (fromList, index, mapWithIndex)
-import Data.Word
+import Data.Word (Word8, Word64)
 import Data.Bits
 import Text.Printf
 
@@ -158,17 +159,22 @@ instance Show BitBoard where
 instance Show State where
   show s = show (board s) ++ show (turn s) ++ "\n" ++ show (history s) ++ "\n"
 
+printword :: Word64 -> IO()
+printword w = printf "value is:   %064b\n" w
 
 -- instance Show BitBoard where
---   show bb = printf "whitepawns is:   %064b\n" (whitepawns bb) ++
---             printf "blackpawns is:   %064b\n" (blackpawns bb) ++
+--   show bb = printf "whitepawns   is: %064b\n" (whitepawns bb) ++
+--             printf "blackpawns   is: %064b\n" (blackpawns bb) ++
 --             printf "whiteknights is: %064b\n" (whiteknights bb) ++
 --             printf "blackknights is: %064b\n" (blackknights bb) ++
 --             printf "whitebishops is: %064b\n" (whitebishops bb) ++
 --             printf "blackbishops is: %064b\n" (blackbishops bb) ++
---             printf "whiterooks is:   %064b\n" (whiterooks bb) ++
---             printf "blackrooks is:   %064b\n" (blackrooks bb) ++
---             printf "whitequeens is:  %064b\n" (whitequeens bb) ++
---             printf "blackqueens is:  %064b\n" (blackqueens bb) ++
---             printf "whitekings is:   %064b\n" (whitekings bb) ++
---             printf "blackkings is:   %064b\n" (blackkings bb)
+--             printf "whiterooks   is: %064b\n" (whiterooks bb) ++
+--             printf "blackrooks   is: %064b\n" (blackrooks bb) ++
+--             printf "whitequeens  is: %064b\n" (whitequeens bb) ++
+--             printf "blackqueens  is: %064b\n" (blackqueens bb) ++
+--             printf "whitekings   is: %064b\n" (whitekings bb) ++
+--             printf "blackkings   is: %064b\n" (blackkings bb) ++
+--             printf "blackpieces  is: %064b\n" (blackpieces bb) ++
+--             printf "whitepieces  is: %064b\n" (whitepieces bb) ++
+--             printf "occupied     is: %064b\n" (occupied bb)
