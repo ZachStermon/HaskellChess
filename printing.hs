@@ -5,7 +5,6 @@ module Printing
 , boardtobit
 , changevariable
 , getspot
-, getoccupied
 , getblackpieces
 , getwhitepieces
 , printword
@@ -73,7 +72,10 @@ showboard b = map showspot (toList b)
 bbstart = BitBoard {whitepawns = 0,blackpawns = 0, whiteknights = 0,blackknights = 0,whitebishops = 0,blackbishops = 0,whiterooks = 0,blackrooks = 0,whitequeens = 0,blackqueens = 0,whitekings = 0,blackkings = 0, whitepieces = 0, blackpieces = 0, occupied = 0}
 --This function will iterate through a board (Sequence of Maybe Pieces), and when encountering a piece, we set the bit to 1 at that location on the corresponding pieces bitboard.
 boardtobit :: Board -> BitBoard
-boardtobit b = btb bbstart b 0
+boardtobit b = bb{whitepieces = wp, blackpieces = bp, occupied = wp.|.bp}
+  where bb = btb bbstart b 0
+        wp = getwhitepieces bb
+        bp = getblackpieces bb
 
 btb :: BitBoard -> Board -> Position -> BitBoard
 btb bb b 64 = bb
@@ -81,8 +83,6 @@ btb bb b n  = btb (changevariable bb (index b (fromEnum n)) n) b (n+1)
 
 
 --Bool
---True - setBit
---False - clearBit
 changevariable :: BitBoard -> Piece -> Position -> BitBoard
 changevariable bb Void        n = bb
 changevariable bb BlackPawn   n = bb{blackpawns   = blackpawns   bb `setBit` (fromEnum n)}
@@ -115,17 +115,13 @@ getspot bb p     | testBit (whitepawns bb)   n = WhitePawn
                  | otherwise                   = Void
                     where n = fromEnum p
 
---checks a given location for a piece occupying that space
-getoccupied :: BitBoard -> Word64
-getoccupied bb = whitepieces bb.|.blackpieces bb
-
 --concatenation of all white bitboards
 getwhitepieces :: BitBoard -> Word64
-getwhitepieces bb = whitepawns bb.|.whiteknights bb.|.whitebishops bb.|.whiterooks bb.|.whitequeens bb.|.whitekings bb
+getwhitepieces bb = (whitepawns bb.|.whiteknights bb.|.whitebishops bb.|.whiterooks bb.|.whitequeens bb.|.whitekings bb)
 
 --concatenation of all black bitboards
 getblackpieces :: BitBoard -> Word64
-getblackpieces bb = blackpawns bb.|.blackknights bb.|.blackbishops bb.|.blackrooks bb.|.blackqueens bb.|.blackkings bb
+getblackpieces bb = (blackpawns bb.|.blackknights bb.|.blackbishops bb.|.blackrooks bb.|.blackqueens bb.|.blackkings bb)
 
 
 

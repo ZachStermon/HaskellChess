@@ -1,17 +1,15 @@
--- module Movechecker
--- ( getmoves
--- , validmove
--- , incheck
--- , stalemate
--- , checkmate
--- , notabletomove
--- , attacked
--- , gameover
--- , makestate
--- , domove
--- , getsudomoves
--- ) where
-module Movechecker where
+module Movechecker
+( getmoves
+, validmove
+, incheck
+, stalemate
+, checkmate
+, gameover
+, makestate
+, domove
+, getsudomoves
+) where
+
 --Necessary imports
 import Types
 import Chess
@@ -32,20 +30,20 @@ getpawnmoves (State {board = bb, turn = False}) p =
   let m1 = if empty bb (p + 8) then [(p,p+8)] else []
       m2 = if row p == 1 && empty bb (p+8) && empty bb (p+16) then (p,p+16):m1 else m1
       m3 = if col p /= 0 && (isenemy bb (p+7) False) then (p,p+7):m2 else m2
-      m4 = if col p /= 0 && (isenemy bb (p+9) False) then (p,p+9):m3 else m3
+      m4 = if col p /= 7 && (isenemy bb (p+9) False) then (p,p+9):m3 else m3
   in m4
 getpawnmoves (State {board = bb, turn = True}) p =
   let m1 = if empty bb (p-8) then [(p,p-8)] else []
       m2 = if row p == 6 && empty bb (p-8) && empty bb (p-16) then (p,p-16):m1 else m1
       m3 = if col p /= 7 && (isenemy bb (p-7) True) then (p,p-7):m2 else m2
-      m4 = if col p /= 7 && (isenemy bb (p-9) True) then (p,p-9):m3 else m3
+      m4 = if col p /= 0 && (isenemy bb (p-9) True) then (p,p-9):m3 else m3
   in m4
 
 
 --returns a list of potentially legal rook moves
 getrookmoves :: State -> Position -> [Move]
 getrookmoves (State {board = bb, turn = t}) p  =
-  let checkup acc pos    | pos < 0             = acc
+  let checkup acc pos    | pos > 63            = acc
                          | isenemy bb pos t    = (p,pos):acc
                          | empty bb pos        = checkup ((p,pos):acc) (pos-8)
                          | otherwise           = acc
@@ -53,15 +51,16 @@ getrookmoves (State {board = bb, turn = t}) p  =
                          | isenemy bb pos t    = (p,pos):acc
                          | empty bb pos        = checkdown ((p,pos):acc) (pos+8)
                          | otherwise           = acc
-      checkleft acc pos  | col pos == 7        = acc
+      checkleft acc pos  | col (pos+1) == 0    = acc
                          | isenemy bb pos t    = (p,pos):acc
                          | empty bb pos        = checkleft ((p,pos):acc) (pos-1)
                          | otherwise           = acc
-      checkright acc pos | col pos == 0        = acc
+      checkright acc pos | col (pos-1) == 7    = acc
                          | isenemy bb pos t    = (p,pos):acc
                          | empty bb pos        = checkright ((p,pos):acc) (pos+1)
                          | otherwise           = acc
   in checkup [] (p-8) ++ checkdown [] (p+8) ++ checkleft [] (p-1) ++ checkright [] (p+1)
+
 
 --gets a list of potentially legal knight moves
 getknightmoves :: State -> Position -> [Move]
@@ -82,22 +81,22 @@ getknightmoves (State {board = b, turn = t}) p =
 
 getbishopmoves :: State -> Position -> [Move]
 getbishopmoves (State {board = bb, turn = t}) p =
-  let checkupleft acc pos    | row pos < 1 || col pos < 1      = acc
-                             | isenemy bb pos t                = (p,pos):acc
-                             | empty bb pos                    = checkupleft ((p,pos):acc) (pos-9)
-                             | otherwise                       = acc
-      checkdownleft acc pos  | row pos > 6 || col pos < 1      = acc
-                             | isenemy bb pos t                = (p,pos):acc
-                             | empty bb pos                    = checkdownleft ((p,pos):acc) (pos+7)
-                             | otherwise                       = acc
-      checkdownright acc pos | row pos > 6 || col pos > 6      = acc
-                             | isenemy bb pos t                = (p,pos):acc
-                             | empty bb pos                    = checkdownright ((p,pos):acc) (pos+9)
-                             | otherwise                       = acc
-      checkupright acc pos   | row pos < 1 || col pos > 6      = acc
-                             | isenemy bb pos t                = (p,pos):acc
-                             | empty bb pos                    = checkupright ((p,pos):acc) (pos-7)
-                             | otherwise                       = acc
+  let checkupleft acc pos    | row (pos+9) < 1 || col (pos+9) < 1 = acc
+                             | isenemy bb pos t                   = (p,pos):acc
+                             | empty bb pos                       = checkupleft ((p,pos):acc) (pos-9)
+                             | otherwise                          = acc
+      checkdownleft acc pos  | row (pos-7) > 6 || col (pos-7) < 1 = acc
+                             | isenemy bb pos t                   = (p,pos):acc
+                             | empty bb pos                       = checkdownleft ((p,pos):acc) (pos+7)
+                             | otherwise                          = acc
+      checkdownright acc pos | row (pos-9) > 6 || col (pos-9) > 6 = acc
+                             | isenemy bb pos t                   = (p,pos):acc
+                             | empty bb pos                       = checkdownright ((p,pos):acc) (pos+9)
+                             | otherwise                          = acc
+      checkupright acc pos   | row (pos+7) < 1 || col (pos+7) > 6 = acc
+                             | isenemy bb pos t                   = (p,pos):acc
+                             | empty bb pos                       = checkupright ((p,pos):acc) (pos-7)
+                             | otherwise                          = acc
   in checkupleft [] (p-9) ++ checkdownleft [] (p+7) ++ checkdownright [] (p+9) ++ checkupright [] (p-7)
 
 
@@ -133,7 +132,7 @@ getcastlemoves s p =
 --returns moves which might put the player in check
 getsudomoves :: State -> [Move]
 --getsudomoves s = concat $ map (\n -> getmovesforspot s (index (board s) n) n) (toList ((if turn s then whitepieces else blackpieces) s))
-getsudomoves s = (\n -> getmovesforspot s (getspot (board s) n) n) =<< (if turn s then bitstolist $ whitepieces (board s) else bitstolist $ blackpieces (board s))
+getsudomoves s = (\n -> getmovesforspot s (getspot (board s) n) n) =<< (bitstolist $ if turn s then whitepieces (board s) else blackpieces (board s))
 
 
 bitstolist :: Word64 -> [Position]
@@ -141,13 +140,19 @@ bitstolist w = map toEnum (filter (\x -> testBit w x) [0 .. 63])
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Piece -> Position -> [Move]
-getmovesforspot s p n | fromEnum p == 1 || fromEnum p == 7  = getpawnmoves   s n
-getmovesforspot s p n | fromEnum p == 2 || fromEnum p == 8  = getknightmoves s n
-getmovesforspot s p n | fromEnum p == 3 || fromEnum p == 9  = getbishopmoves s n
-getmovesforspot s p n | fromEnum p == 4 || fromEnum p == 10 = getrookmoves   s n
-getmovesforspot s p n | fromEnum p == 5 || fromEnum p == 11 = getbishopmoves s n ++ getrookmoves   s n
-getmovesforspot s p n | fromEnum p == 6 || fromEnum p == 12 = getkingmoves   s n ++ getcastlemoves s n
-getmovesforspot s _ n = []
+getmovesforspot s Void n = []
+getmovesforspot s BlackPawn n = getpawnmoves s n
+getmovesforspot s WhitePawn n = getpawnmoves s n
+getmovesforspot s BlackKnight n = getknightmoves s n
+getmovesforspot s WhiteKnight n = getknightmoves s n
+getmovesforspot s BlackBishop n = getbishopmoves s n
+getmovesforspot s WhiteBishop n = getbishopmoves s n
+getmovesforspot s BlackRook n = getrookmoves s n
+getmovesforspot s WhiteRook n = getrookmoves s n
+getmovesforspot s BlackQueen n = getbishopmoves s n ++ getrookmoves s n
+getmovesforspot s WhiteQueen n = getbishopmoves s n ++ getrookmoves s n
+getmovesforspot s BlackKing n = getkingmoves s n ++ getcastlemoves s n
+getmovesforspot s WhiteKing n = getkingmoves s n ++ getcastlemoves s n
 
 
 --TODO everything below this
@@ -157,14 +162,14 @@ getmoves s = Prelude.filter (notcheckmove s) $ getsudomoves s
 
 --TODO updated getmoves function
 validmove :: State -> Move -> Bool
-validmove s (o,d) = (o,d) `elem` getmoves s
+validmove s m = m `elem` getmoves s
 
 notcheckmove :: State -> Move -> Bool
-notcheckmove s (o,d) = (shiftL 1 (fromEnum d)).&.enemyattacks == 0 where enemyattacks = if turn s then blackattacks s else whiteattacks s
+notcheckmove s m = not $ incheck (domove s m)
 
 --returns true if and only if the current sides king can be attacked by an enemy piece
 incheck :: State -> Bool
-incheck s  = (king.&.enemyattacks) == 1
+incheck s  = (king.&.enemyattacks) /= 0
   where king = if turn s then whitekings (board s) else blackkings (board s)
         enemyattacks = if turn s then blackattacks s else whiteattacks s
 
@@ -174,16 +179,11 @@ gameover s = (checkmate s) || (stalemate s)
 
 --not in check and not able to move
 stalemate :: State -> Bool
-stalemate s = not (incheck s) && notabletomove s (getsudomoves s)
-
---as soon as a valid move is seen (a move that does not put itself in check) False is returned else True
--- TODO fix this
-notabletomove :: State -> [Move] -> Bool
-notabletomove s m = not $ False `elem` (map (\x -> incheck s) m)
+stalemate s = not (incheck s) && null (getmoves s)
 
 --in check and not able to move
 checkmate :: State -> Bool
-checkmate s = incheck s && notabletomove s (getsudomoves s)
+checkmate s = incheck s && null (getmoves s)
 
 --returns true if and only if the square is attacked by the current player
 -- attacked :: State -> Maybe Int -> Bool
@@ -193,8 +193,12 @@ checkmate s = incheck s && notabletomove s (getsudomoves s)
 
 --TODO
 updateattacks :: State -> State
-updateattacks s | turn s    = s
-                | otherwise = s
+updateattacks s | not $ turn s = s{whiteattacks = parsemoves (getsudomoves (updateturn s)) 0, blackattacks = parsemoves (getsudomoves s) 0}
+                | otherwise    = s{blackattacks = parsemoves (getsudomoves (updateturn s)) 0, whiteattacks = parsemoves (getsudomoves s) 0}
+
+parsemoves :: [Move] -> Word64 -> Word64
+parsemoves [] n     = n
+parsemoves (x:xs) n = parsemoves xs ((bit (63-(fromIntegral (snd x)))).|.n)
 
 --this is a helper function that makes a state out of all of the specified information and stores it for function use.
 makestate :: BitBoard -> Side -> State
@@ -214,7 +218,12 @@ domove s m = updateattacks (dmove s m)
 
 
 domoves :: State -> State
-domoves s = domove s $ (getmoves s)!!0
+domoves s = domove s $ head (getmoves s)
+
+
+
+
+
 
 
 

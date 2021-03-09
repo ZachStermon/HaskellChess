@@ -4,7 +4,6 @@ module Chess where
 import Helpers
 import Types
 import Printing
-import Data.Maybe
 import Data.Word
 import Data.Bits
 
@@ -67,7 +66,10 @@ rawmove (o,d) w = (w `clearBit` (fromIntegral o)) `setBit` (fromIntegral d)
 
 --execute move takes a board and a move and will return a new board with the updated move having been played.
 executemove :: BitBoard -> Move -> BitBoard
-executemove bb (o,d) = b{whitepieces = getwhitepieces b, blackpieces = getblackpieces b, occupied = getoccupied b} where b = movepiece (removepiece bb d) (o,d)
+executemove bb (o,d) = b{whitepieces = wp, blackpieces = bp, occupied = bp.|.wp}
+  where b = movepiece (removepiece bb d) (o,d)
+        bp = getblackpieces b
+        wp = getwhitepieces b
 
 movepiece :: BitBoard -> Move -> BitBoard
 movepiece b@(BitBoard{whitepawns = wp})    (o,d) | testBit wp (fromIntegral o) = b{whitepawns   = rawmove (o,d) wp}
@@ -177,15 +179,16 @@ notfriendlyfire bb (o,d) = empty bb d || ((getcolor $ getspot bb o) /= (getcolor
 -- also takes a state object so that it can determine if castling can be done
 -- TODO
 premove :: State -> Move -> State
-premove s (o,d)  | (getspot (board s) o) == WhitePawn = if (row o == 1) then promote s (o,d)  else updateboard s (executemove (board s) (o,d))
-                 | (getspot (board s) o) == BlackPawn = if (row o == 6) then promote s (o,d) else updateboard s (executemove (board s) (o,d))
-                 | o == 60 || o == 4                  = if whitecastle s (o,d) || blackcastle s (o,d) then docastle s (o,d) else updateboard s (executemove (board s) (o,d))
-premove s m                                           = updateboard s (executemove (board s) m)
+premove s (o,d)  | (getspot (board s) o) == WhitePawn && (row o == 1) = promote s (o,d)
+                 | (getspot (board s) o) == BlackPawn && (row o == 6) = promote s (o,d)
+                 | o == 60 && whitecastle s (o,d)                     = docastle s (o,d)
+                 | o == 4  && blackcastle s (o,d)                     = docastle s (o,d)
+                 | otherwise                                          = updateboard s (executemove (board s) (o,d))
 
 
 --This function handles the promoting of pawns into queens, updates the board with a new queen piece.
 promote :: State -> Move -> State
-promote s (o,d) = updateboard s (changevariable (changevariable (board s) Void o) (if turn s then WhiteQueen else BlackQueen) d)
+promote s (o,d) = updateboard s (changevariable (removepiece (removepiece (board s) d) o) (if turn s then WhiteQueen else BlackQueen) d)
 
 --the driver for castling, actually performs the moves to move the pieces.
 docastle :: State -> Move -> State
@@ -196,15 +199,15 @@ docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (
 
 --checks for castling on white team.
 whitecastle :: State -> Move -> Bool
-whitecastle s (60, 62) = empty (board s) 61 && empty (board s) 62
-whitecastle s (60, 58) = empty (board s) 57 && empty (board s) 58 && empty (board s) 59
+whitecastle s (60, 62) = empty (board s) 61 && empty (board s) 62 && ws s
+whitecastle s (60, 58) = empty (board s) 57 && empty (board s) 58 && empty (board s) 59 && wl s
 whitecastle s _        = False
 
 
 --checks for castling on black team.
 blackcastle :: State -> Move -> Bool
-blackcastle s (4, 6) = empty (board s) 5 && empty (board s) 6
-blackcastle s (4, 2) = empty (board s) 1 && empty (board s) 2 && empty (board s) 3
+blackcastle s (4, 6) = empty (board s) 5 && empty (board s) 6 && bs s
+blackcastle s (4, 2) = empty (board s) 1 && empty (board s) 2 && empty (board s) 3 && bl s
 blackcastle s _      = False
 
 
@@ -212,7 +215,8 @@ blackcastle s _      = False
 
 --checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
 isenemy :: BitBoard -> Position -> Side -> Bool
-isenemy bb i t = exists bb i && (getcolor $ getspot bb i) /= t
+isenemy bb i True  =  testBit (blackpieces bb) (fromIntegral i)
+isenemy bb i False =  testBit (whitepieces bb) (fromIntegral i)
 
 
 

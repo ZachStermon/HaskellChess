@@ -19,11 +19,10 @@ m3 = makestate mateinthree True
 m3v2 = makestate mateinthreev2 True
 m3v3 = makestate mateinthreev3 True
 initi = makestate initial True
-
 rookmate1 = makestate rookmate True
 
 --declarations
-maxdepth = 5
+maxdepth = 4
 minval = -12345
 maxval = 12345
 
@@ -217,43 +216,43 @@ minimum' [(a,b,c)] = (minimum a,b,c)
 
 
 
--- lookup table that remebers a specific boards evaluation
-type Table = [(Board, Int)]
-
-lookuptable :: Table -> Board -> Bool
-lookuptable t m = m `elem` (map fst t)
-
-geteval :: Table -> Board -> Int -> Int
-geteval t m n = if fst (t!!n) == m then snd (t!!n) else geteval t m (n+1)
-
-addtotable :: Table -> State -> Table
-addtotable t s = ((board s), (staticeval s)):t
-
-
-
-
--- infinite rose tree of all possible games
-listtrees :: State -> [Move] -> [GameTree]
-listtrees s []      = [makenode s []]
-listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state))] ++ listtrees s xs
-  where state = domove s x
-
-maketree :: State -> GameTree
-maketree s = makenode s (listtrees s (getmoves s))
-
-makenode :: State -> [GameTree] -> GameTree
-makenode s n = GameTree{state = s, eval = (staticeval s), children = n}
-
-data GameTree = GameTree { state :: State,
-                           eval :: Int,
-                           children :: [GameTree]
-                          } deriving (Show, Eq)
-
-getnode :: GameTree -> GameTree
-getnode g = g{children = []}
-
-getchildnodes :: GameTree -> [GameTree]
-getchildnodes g = map (\x -> getnode x) (children g)
+-- -- lookup table that remebers a specific boards evaluation
+-- type Table = [(Board, Int)]
+--
+-- lookuptable :: Table -> Board -> Bool
+-- lookuptable t m = m `elem` (map fst t)
+--
+-- geteval :: Table -> Board -> Int -> Int
+-- geteval t m n = if fst (t!!n) == m then snd (t!!n) else geteval t m (n+1)
+--
+-- addtotable :: Table -> State -> Table
+-- addtotable t s = ((board s), (staticeval s)):t
+--
+--
+--
+--
+-- -- infinite rose tree of all possible games
+-- listtrees :: State -> [Move] -> [GameTree]
+-- listtrees s []      = [makenode s []]
+-- listtrees s (x:xs)  = [makenode state (listtrees state (getmoves state))] ++ listtrees s xs
+--   where state = domove s x
+--
+-- maketree :: State -> GameTree
+-- maketree s = makenode s (listtrees s (getmoves s))
+--
+-- makenode :: State -> [GameTree] -> GameTree
+-- makenode s n = GameTree{state = s, eval = (staticeval s), children = n}
+--
+-- data GameTree = GameTree { state :: State,
+--                            eval :: Int,
+--                            children :: [GameTree]
+--                           } deriving (Show, Eq)
+--
+-- getnode :: GameTree -> GameTree
+-- getnode g = g{children = []}
+--
+-- getchildnodes :: GameTree -> [GameTree]
+-- getchildnodes g = map (\x -> getnode x) (children g)
 
 
 
