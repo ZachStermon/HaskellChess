@@ -124,21 +124,32 @@ minimaxalphabeta depth a b s | null moves = (if turn s then id else (0-)) (done 
 
 --sortBy (\x y -> compare (staticeval (domove s x)) (staticeval (domove s y))) $
 
+recurses:: State -> Int -> Int -> [Move] -> [Move] -> (Int, [Move])
+recurses s a b h []     = (a,h)
+recurses s a b h (m:ms) =
+                        let (x,y) = negamax (domove s m) (h) 0 (-b) (-a)
+                            (a',h') = if(a >= -x) then (a,h) else (-x,m:y)
+                        in  if(a' >= b) then (a',h') else recurses s (a') (b) (h') ms
 
+
+--alpha is best eval for current player
+--beta is best eval for opponent
 negamax :: State -> [Move] -> Int -> Int -> Int -> (Int, [Move])
 negamax s h 0 a b = (a `max` ((if turn s then id else (0-)) (staticeval s)) `min` b,h)
-negamax s h d a b | null moves =  ((if turn s then id else (0-)) (done s),h)
+negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval else maxval, h)
+                  | blackkings (board s) == 0 = (if turn s then maxval else minval, h)
                   | otherwise = recurse (a,h) (b,h) moves
-                  where moves = sortBy (\x y -> compare (staticeval (domove s x)) (staticeval (domove s y))) $ getmoves s
+                  where moves = getsudomoves s
                         recurse (a,as) (b,bs) [] = (a,as)
                         recurse (a,as) (b,bs) (m:ms) | newalpha >= b = (newalpha, alpha')
                                                      | otherwise = recurse (newalpha,alpha') (b,bs) ms
-                                                     where (alpha,alphal) = negamax (domove s m) (h++[m]) (d-1) (-b) (-a)
-                                                           (newalpha,alpha') = if a > (-alpha)
+                                                     where (alpha,alphal) = negamax (domove s m) (h) (d-1) (-b) (-a)
+                                                           (newalpha,alpha') = if a >= (-alpha)
                                                                                then (a,as)
-                                                                               else (-alpha,alphal)
+                                                                               else (-alpha,m:alphal)
 
-
+moves = getsudomoves m3v3
+fun m = negamax (domove m3v3 m) [m] 0 (-9999) (9999)
 
 
 

@@ -5,6 +5,7 @@ import Types
 -- Board States
 staleboard     = boardtobit $ getboard ("kr--------r-----------------------------r-------P-------K-------")
 checkmateboard = boardtobit $ getboard ("----k------------------------------q---------------PPb-----QKB--")
+checkboard     = boardtobit $ getboard ("----k------------------------------q----------b----PP-Q-----KB--")
 testboard      = boardtobit $ getboard ("rnbqkb-rppp---pp-----------nNp-Q--B-------------PPPP-PPPRNB-K--R")
 mateinthree    = boardtobit $ getboard ("---------------kp------p----B-p----P-pQ--------PP-----PK-----q--")
 mateinthreev2  = boardtobit $ getboard ("---rk--rp----pppb-p-------b-----Nq--PPn--P------P-P-N-PPR-B-QK-R") --best moves are as follows: (b4e1 (33,60)),(e1f1 (60,61)),(d8d1 (3,59))

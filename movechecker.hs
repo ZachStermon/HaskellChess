@@ -8,6 +8,7 @@ module Movechecker
 , makestate
 , domove
 , getsudomoves
+, domoves
 ) where
 
 --Necessary imports
@@ -22,6 +23,7 @@ import Boards
 import Printing
 
 state = makestate bbinit True
+state1 = makestate
 
 
 -- Returns a list of up to four potentially legal pawn moves
@@ -165,7 +167,7 @@ validmove :: State -> Move -> Bool
 validmove s m = m `elem` getmoves s
 
 notcheckmove :: State -> Move -> Bool
-notcheckmove s m = not $ incheck (domove s m)
+notcheckmove s m = not $ incheck (updateturn $ domove s m)
 
 --returns true if and only if the current sides king can be attacked by an enemy piece
 incheck :: State -> Bool
@@ -185,12 +187,6 @@ stalemate s = not (incheck s) && null (getmoves s)
 checkmate :: State -> Bool
 checkmate s = incheck s && null (getmoves s)
 
---returns true if and only if the square is attacked by the current player
--- attacked :: State -> Maybe Int -> Bool
--- attacked s Nothing  = False
--- attacked s (Just i) | turn s    = i `elem` (whiteattacks s)
---                     | otherwise = i `elem` (blackattacks s)
-
 --TODO
 updateattacks :: State -> State
 updateattacks s | not $ turn s = s{whiteattacks = parsemoves (getsudomoves (updateturn s)) 0, blackattacks = parsemoves (getsudomoves s) 0}
@@ -198,7 +194,7 @@ updateattacks s | not $ turn s = s{whiteattacks = parsemoves (getsudomoves (upda
 
 parsemoves :: [Move] -> Word64 -> Word64
 parsemoves [] n     = n
-parsemoves (x:xs) n = parsemoves xs ((bit (63-(fromIntegral (snd x)))).|.n)
+parsemoves (x:xs) n = parsemoves xs (n `setBit` (fromIntegral (snd x)))
 
 --this is a helper function that makes a state out of all of the specified information and stores it for function use.
 makestate :: BitBoard -> Side -> State

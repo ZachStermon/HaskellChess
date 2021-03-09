@@ -67,7 +67,7 @@ rawmove (o,d) w = (w `clearBit` (fromIntegral o)) `setBit` (fromIntegral d)
 --execute move takes a board and a move and will return a new board with the updated move having been played.
 executemove :: BitBoard -> Move -> BitBoard
 executemove bb (o,d) = b{whitepieces = wp, blackpieces = bp, occupied = bp.|.wp}
-  where b = movepiece (removepiece bb d) (o,d)
+  where b  = movepiece (removepiece bb d) (o,d)
         bp = getblackpieces b
         wp = getwhitepieces b
 
@@ -102,28 +102,14 @@ removepiece b@(BitBoard{whitekings = bp})   p | testBit bp n = b{whitekings   = 
 removepiece b _ = b
 
 
-
-
-
-
-
-
-
-
-
-
 -- executemove' :: Side -> Move -> BitBoard -> BitBoard
 -- executemove' t (o,d) bb = clearspot (setspot bb (getspot bb o) d) o
 
 func :: BitBoard -> BitBoard
 func bb = executemove (executemove bb (0,1)) (1,0)
 
-
-
 func' :: Word8 -> Word8
 func' w = toEnum $ fromIntegral w
-
-
 
 
 --gets the color of a piece and returns either True for white or False for black.
@@ -199,26 +185,22 @@ docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (
 
 --checks for castling on white team.
 whitecastle :: State -> Move -> Bool
-whitecastle s (60, 62) = empty (board s) 61 && empty (board s) 62 && ws s
-whitecastle s (60, 58) = empty (board s) 57 && empty (board s) 58 && empty (board s) 59 && wl s
+whitecastle s (60, 62) = empty (board s) 61 && empty (board s) 62 && ws s && testBit (whiterooks (board s)) 63
+whitecastle s (60, 58) = empty (board s) 57 && empty (board s) 58 && empty (board s) 59 && wl s && testBit (whiterooks (board s)) 56
 whitecastle s _        = False
 
 
 --checks for castling on black team.
 blackcastle :: State -> Move -> Bool
-blackcastle s (4, 6) = empty (board s) 5 && empty (board s) 6 && bs s
-blackcastle s (4, 2) = empty (board s) 1 && empty (board s) 2 && empty (board s) 3 && bl s
+blackcastle s (4, 6) = empty (board s) 5 && empty (board s) 6 && bs s && testBit (blackrooks (board s)) 7
+blackcastle s (4, 2) = empty (board s) 1 && empty (board s) 2 && empty (board s) 3 && bl s && testBit (blackrooks (board s)) 0
 blackcastle s _      = False
-
-
 
 
 --checks the opposite of notfriendlyfire, makes sure that piece being attacked is opposite color.
 isenemy :: BitBoard -> Position -> Side -> Bool
 isenemy bb i True  =  testBit (blackpieces bb) (fromIntegral i)
 isenemy bb i False =  testBit (whitepieces bb) (fromIntegral i)
-
-
 
 
 moveisanattack :: State -> Move -> Bool

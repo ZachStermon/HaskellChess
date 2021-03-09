@@ -8,6 +8,7 @@ module Printing
 , getblackpieces
 , getwhitepieces
 , printword
+, printmoves
 ) where
 
 
@@ -16,6 +17,7 @@ import Data.Sequence (fromList, index, mapWithIndex)
 import Data.Word (Word8, Word64)
 import Data.Bits
 import Text.Printf
+import Data.Char
 
 import Types
 import Helpers
@@ -126,13 +128,6 @@ getblackpieces bb = (blackpawns bb.|.blackknights bb.|.blackbishops bb.|.blackro
 
 
 
-
-
-
-
-
-
-
 bittoboard :: BitBoard -> [Piece]
 bittoboard bb = map (getspot bb) [0..63]
 
@@ -157,6 +152,15 @@ instance Show State where
 
 printword :: Word64 -> IO()
 printword w = printf "value is:   %064b\n" w
+
+printpos :: Word8 -> String
+printpos n = [chr . (65 +) . fromEnum $ (n.&.7), succ . intToDigit . (7 -) . fromEnum $ (shiftR n 3)]
+
+printmove :: Move -> String
+printmove (o,d) = (printpos o) ++ " to " ++ (printpos d)
+
+printmoves :: [Move] -> [String]
+printmoves ms = map printmove ms
 
 -- instance Show BitBoard where
 --   show bb = printf "whitepawns   is: %064b\n" (whitepawns bb) ++
