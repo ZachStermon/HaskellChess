@@ -27,14 +27,14 @@ state1 = makestate
 
 
 -- Returns a list of up to four potentially legal pawn moves
-getpawnmoves :: State -> Position -> [Move]
-getpawnmoves (State {board = bb, turn = False}) p =
+getpawnmoves :: BitBoard -> Side -> Position -> [Move]
+getpawnmoves bb False p =
   let m1 = if empty bb (p + 8) then [(p,p+8)] else []
       m2 = if row p == 1 && empty bb (p+8) && empty bb (p+16) then (p,p+16):m1 else m1
       m3 = if col p /= 0 && (isenemy bb (p+7) False) then (p,p+7):m2 else m2
       m4 = if col p /= 7 && (isenemy bb (p+9) False) then (p,p+9):m3 else m3
   in m4
-getpawnmoves (State {board = bb, turn = True}) p =
+getpawnmoves bb True p =
   let m1 = if empty bb (p-8) then [(p,p-8)] else []
       m2 = if row p == 6 && empty bb (p-8) && empty bb (p-16) then (p,p-16):m1 else m1
       m3 = if col p /= 7 && (isenemy bb (p-7) True) then (p,p-7):m2 else m2
@@ -43,8 +43,8 @@ getpawnmoves (State {board = bb, turn = True}) p =
 
 
 --returns a list of potentially legal rook moves
-getrookmoves :: State -> Position -> [Move]
-getrookmoves (State {board = bb, turn = t}) p  =
+getrookmoves :: BitBoard -> Side -> Position -> [Move]
+getrookmoves bb t p  =
   let checkup acc pos    | pos > 63            = acc
                          | isenemy bb pos t    = (p,pos):acc
                          | empty bb pos        = checkup ((p,pos):acc) (pos-8)
@@ -65,8 +65,8 @@ getrookmoves (State {board = bb, turn = t}) p  =
 
 
 --gets a list of potentially legal knight moves
-getknightmoves :: State -> Position -> [Move]
-getknightmoves (State {board = b, turn = t}) p =
+getknightmoves :: BitBoard -> Position -> [Move]
+getknightmoves b p =
   let m1 = if notfriendlyfire b (p,p+10) && row p < 7 && col p < 6 then [(p,p+10)]  else []
       m2 = if notfriendlyfire b (p,p+17) && row p < 6 && col p < 7 then (p,p+17):m1 else m1
       m3 = if notfriendlyfire b (p,p+15) && row p < 6 && col p > 0 then (p,p+15):m2 else m2
@@ -77,12 +77,8 @@ getknightmoves (State {board = b, turn = t}) p =
       m8 = if notfriendlyfire b (p,p-6)  && row p > 0 && col p < 6 then (p,p-6 ):m7 else m7
   in m8
 
--- --checks the knight movement type so that it cannot travel accross the board
--- nmovement :: Move -> Bool
--- nmovement (o,d) = True --((abs (row o - row d) * (abs (col o - col d))) == 2)
-
-getbishopmoves :: State -> Position -> [Move]
-getbishopmoves (State {board = bb, turn = t}) p =
+getbishopmoves :: BitBoard -> Side -> Position -> [Move]
+getbishopmoves bb t p =
   let checkupleft acc pos    | row (pos+9) < 1 || col (pos+9) < 1 = acc
                              | isenemy bb pos t                   = (p,pos):acc
                              | empty bb pos                       = checkupleft ((p,pos):acc) (pos-9)
@@ -104,10 +100,9 @@ getbishopmoves (State {board = bb, turn = t}) p =
 
 
 --gets a list of all potentially valid king moves including castling
-getkingmoves :: State -> Position -> [Move]
-getkingmoves s p =
-  let b = board s
-      m1 = if notfriendlyfire b (p,p+1) && col p < 7              then [(p,p+1)]  else []
+getkingmoves :: BitBoard -> Position -> [Move]
+getkingmoves b p =
+  let m1 = if notfriendlyfire b (p,p+1) && col p < 7              then [(p,p+1)]  else []
       m2 = if notfriendlyfire b (p,p+9) && row p < 7 && col p < 7 then (p,p+9):m1 else m1
       m3 = if notfriendlyfire b (p,p+8) && row p < 7              then (p,p+8):m2 else m2
       m4 = if notfriendlyfire b (p,p+7) && row p < 7 && col p > 0 then (p,p+7):m3 else m3
@@ -142,19 +137,19 @@ bitstolist w = map toEnum (filter (\x -> testBit w x) [0 .. 63])
 
 --returns a list of moves for a given spot at a specified position
 getmovesforspot :: State -> Piece -> Position -> [Move]
-getmovesforspot s Void n = []
-getmovesforspot s BlackPawn n = getpawnmoves s n
-getmovesforspot s WhitePawn n = getpawnmoves s n
-getmovesforspot s BlackKnight n = getknightmoves s n
-getmovesforspot s WhiteKnight n = getknightmoves s n
-getmovesforspot s BlackBishop n = getbishopmoves s n
-getmovesforspot s WhiteBishop n = getbishopmoves s n
-getmovesforspot s BlackRook n = getrookmoves s n
-getmovesforspot s WhiteRook n = getrookmoves s n
-getmovesforspot s BlackQueen n = getbishopmoves s n ++ getrookmoves s n
-getmovesforspot s WhiteQueen n = getbishopmoves s n ++ getrookmoves s n
-getmovesforspot s BlackKing n = getkingmoves s n ++ getcastlemoves s n
-getmovesforspot s WhiteKing n = getkingmoves s n ++ getcastlemoves s n
+getmovesforspot _ Void _ = []
+getmovesforspot (State {board = bb}) BlackPawn n = getpawnmoves bb False n
+getmovesforspot (State {board = bb}) WhitePawn n = getpawnmoves bb True  n
+getmovesforspot (State {board = bb}) BlackKnight n = getknightmoves bb n
+getmovesforspot (State {board = bb}) WhiteKnight n = getknightmoves bb n
+getmovesforspot (State {board = bb}) BlackBishop n = getbishopmoves bb False n
+getmovesforspot (State {board = bb}) WhiteBishop n = getbishopmoves bb True  n
+getmovesforspot (State {board = bb}) BlackRook n = getrookmoves bb False n
+getmovesforspot (State {board = bb}) WhiteRook n = getrookmoves bb True  n
+getmovesforspot (State {board = bb}) BlackQueen n = getbishopmoves bb False n ++ getrookmoves bb False n
+getmovesforspot (State {board = bb}) WhiteQueen n = getbishopmoves bb True  n ++ getrookmoves bb True  n
+getmovesforspot s BlackKing n = getkingmoves (board s) n ++ getcastlemoves s n
+getmovesforspot s WhiteKing n = getkingmoves (board s) n ++ getcastlemoves s n
 
 
 --TODO everything below this

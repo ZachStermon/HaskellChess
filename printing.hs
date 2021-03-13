@@ -3,12 +3,12 @@ module Printing
 , boardtostring
 , stringtomove
 , boardtobit
-, changevariable
 , getspot
 , getblackpieces
 , getwhitepieces
 , printword
 , printmoves
+, changevariable
 ) where
 
 

@@ -17,6 +17,6 @@ mateinthreev4  = boardtobit $ getboard ("-------------B-----------K-------------
 mateinfour     = boardtobit $ getboard ("-------------B-----------K-----------------R------------k-------")
 initial        = boardtobit $ getboard ("rnbqkbnrpppppppp--------------------------------PPPPPPPPRNBQKBNR")
 rookmate       = boardtobit $ getboard $ "------k-R-------------------K-----------------------------------"
-
+winmaterial    = boardtobit $ getboard ("rn--nbk---pbrpppp-q------p-pP------P--p-PPNB-----BP-QN-P--KR---R")
 
 bbinit         = BitBoard {whitepawns = 71776119061217280, blackpawns = 65280, whiteknights = 4755801206503243776, blackknights = 66, whitebishops = 2594073385365405696, blackbishops = 36, whiterooks = 9295429630892703744, blackrooks = 129, whitequeens = 576460752303423488, blackqueens = 8, whitekings = 1152921504606846976, blackkings = 16, whitepieces = 18446462598732840960, blackpieces = 65535, occupied = 18446462598732906495}

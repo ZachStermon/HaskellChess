@@ -20,9 +20,10 @@ m3v2 = makestate mateinthreev2 True
 m3v3 = makestate mateinthreev3 True
 initi = makestate initial True
 rookmate1 = makestate rookmate True
+material = makestate winmaterial True
 
 --declarations
-maxdepth = 4
+maxdepth = 2
 minval = -12345
 maxval = 12345
 
@@ -113,8 +114,8 @@ done s | turn s     = if incheck s then minval else 0
 --beta  = best eval for oposing player so far
 --Minimax with alpha-beta pruning
 minimaxalphabeta :: Int -> Int -> Int -> State -> Int
-minimaxalphabeta 0     a b s = a `max` ((if turn s then id else (0-)) (staticeval s)) `min` b
-minimaxalphabeta depth a b s | null moves = (if turn s then id else (0-)) (done s )           --checkmate or stalemate
+minimaxalphabeta 0     a b s = a `max` ((if turn s then id else (0-)) (staticeval (board s))) `min` b
+minimaxalphabeta depth a b s | null moves = (if turn s then id else (0-)) (done s)           --checkmate or stalemate
                              | otherwise  = recurse a b moves --otherwise call recursive function
     where moves = getmoves s
           recurse a b []  = a
@@ -135,9 +136,9 @@ recurses s a b h (m:ms) =
 --alpha is best eval for current player
 --beta is best eval for opponent
 negamax :: State -> [Move] -> Int -> Int -> Int -> (Int, [Move])
-negamax s h 0 a b = (a `max` ((if turn s then id else (0-)) (staticeval s)) `min` b,h)
-negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval else maxval, h)
-                  | blackkings (board s) == 0 = (if turn s then maxval else minval, h)
+negamax s h 0 a b = (a `max` ((if turn s then id else (0-)) (staticeval (board s))) `min` b,h)
+negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval - d else maxval + d, h)
+                  | blackkings (board s) == 0 = (if turn s then maxval + d else minval - d, h)
                   | otherwise = recurse (a,h) (b,h) moves
                   where moves = getsudomoves s
                         recurse (a,as) (b,bs) [] = (a,as)
@@ -148,17 +149,50 @@ negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval else maxv
                                                                                then (a,as)
                                                                                else (-alpha,m:alphal)
 
-moves = getsudomoves m3v3
-fun m = negamax (domove m3v3 m) [m] 0 (-9999) (9999)
+-- moves = getsudomoves m3v3
+-- fun m = negamax (domove m3v3 m) [m] 0 (-9999) (9999)
+
+-- negamax' :: State -> Int -> Int -> Int -> Int
+-- negamax' s 0 a b = (if turn s then id else (0-)) $ staticeval (board s) -- this will need to be changed to scan future attacking sequences
+-- negamax' s d a b | whitekings (board s) == 0 = if turn s then minval - d else maxval + d
+--                  | blackkings (board s) == 0 = if turn s then maxval + d else minval - d
+--                  | otherwise                 = recurse a b (sortmoves s)
+--                 where recurse a b []         = a
+--                       recurse a b (m:ms) | score >= b = b                 --fail hard
+--                                          | score > a  = recurse score b ms--fail soft
+--                                          | otherwise  = recurse a b ms    --default
+--                                   where score = -negamax' (domove s m) (d-1) (-b) (-a)
+
+negamax' :: State -> Int -> Int -> Int -> Int
+negamax' s 0 alpha beta = (if turn s then id else (0-)) $ quiescencesearch s 5 alpha beta
+negamax' s d alpha beta | null moves = if incheck s then minval-d else 0
+                        | otherwise  = recurse alpha beta moves
+                where moves = sortedmoves s
+                      recurse a b []                  = a
+                      recurse a b (m:ms) | score >= b = b                 --fail hard
+                                         | score > a  = recurse score b ms--fail soft
+                                         | otherwise  = recurse a b ms    --default
+                                  where score = -negamax' (domove s m) (d-1) (-b) (-a)
+
+callnegamax' :: State -> Int -> (Int, Move)
+callnegamax' s d = recurse (-9999,(64,64)) (9999,(64,64)) (sortedmoves s)
+  where recurse (a,am) (b,bm) []                  = (a,am)
+        recurse (a,am) (b,bm) (m:ms) | score >= b = (score,m)                    --fail hard, beta cutoff
+                                     | score > a  = recurse (score,m) (b,bm) ms  --fail soft
+                                     | otherwise  = recurse (a,am) (b,bm) ms     --default
+                    where score = -negamax' (domove s m) d (-b) (-a)
+
+sortedmoves :: State -> [Move]
+sortedmoves s = sortbool (board s) [] (getmoves s)
+
+sortbool :: BitBoard -> [Move] -> [Move] -> [Move]
+sortbool bb ms []     = ms
+sortbool bb ms (x:xs) = sortbool bb (if moveisanattack bb x then (x:ms) else (ms ++ [x])) xs
 
 
-
-
-
-
-
-
-
+foreach' :: State -> [(Int, Move)]
+foreach' s = Prelude.zip (map (\x -> negamax' (domove s x) maxdepth (-9999) (9999)) moves) moves
+  where moves = getsudomoves s
 
 
 --No need to recompute move
@@ -168,23 +202,26 @@ foreach s = Prelude.zip (map ((0-) . minimaxalphabeta maxdepth (-9999) (9999)) (
   where moves = getmoves s
 
 nstat :: State -> Int
-nstat s | turn s    = staticeval s
-        | otherwise = -staticeval s
+nstat s | turn s    = staticeval (board s)
+        | otherwise = -staticeval (board s)
 
 
 
---helper function for sorting the list of moves and values.
--- sortmoves :: State -> [(Int, Move)] -> [(Int, Move)]
--- sortmoves s ms = Data.List.sortBy
-
-
---           eval move  a     b
-type Mini = (Int, Move, Int , Int)
-
--- evalsomemoves :: State -> [Move] -> Int -> Int -> Int -> Mini
--- evalsomemoves s (m:ms) alpha beta 0 =
-
-hide' (a,b,c,d) = (a,b)
+quiescencesearch :: State -> Int -> Int -> Int -> Int
+quiescencesearch s 0 alpha beta                    = staticeval (board s)
+quiescencesearch s d alpha beta | null moves       = if incheck s then minval else 0
+                                | standpat >= beta = beta
+                                | alpha < standpat = recurse standpat beta filteredmoves
+                                | otherwise        = recurse alpha    beta filteredmoves
+  where moves = (getmoves s)
+        filteredmoves = filter (moveisanattack bb) moves
+        bb = board s
+        standpat = staticeval bb
+        recurse a b []     = a
+        recurse a b (m:ms)   | score >= b = b                 --fail hard
+                             | score > a  = recurse score b ms--fail soft
+                             | otherwise  = recurse a b ms    --default
+                    where score = -quiescencesearch (domove s m) (d-1) (-b) (-a)
 
 
 
@@ -192,7 +229,7 @@ hide' (a,b,c,d) = (a,b)
 
 
 evalonemove :: State -> Move -> (Int,Move)
-evalonemove s m = (staticeval (domove s m),m)
+evalonemove s m = (staticeval (board (domove s m)),m)
 
 
 

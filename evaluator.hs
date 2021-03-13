@@ -1,5 +1,6 @@
 module Evaluator (
-  staticeval
+  staticeval,
+  countpieces
 ) where
 import Types
 import Weights
@@ -14,13 +15,19 @@ import Movechecker
 -- staticeval :: State -> Int
 -- staticeval (State{board=b}) = sum $ map (\n -> if empty b n then 0 else (value (getspot b n))) [0..63] -- + (weightedposition x n)
 
+countpieces :: BitBoard -> Int
+countpieces b =  (popCount (whitepawns b))   -  (popCount (blackpawns b)) +
+                 (popCount (whiteknights b)) -  (popCount (blackknights b)) +
+                 (popCount (whitebishops b)) -  (popCount (blackbishops b)) +
+                 (popCount (whiterooks b))   -  (popCount (blackrooks b)) +
+                 (popCount (whitequeens b))  -  (popCount (blackqueens b))
 
-staticeval :: State -> Int
-staticeval (State{board=b}) = value WhitePawn   (popCount (whitepawns b))   + value BlackPawn   (popCount (blackpawns b)) +
-                              value WhiteKnight (popCount (whiteknights b)) + value BlackKnight (popCount (blackknights b)) +
-                              value WhiteBishop (popCount (whitebishops b)) + value BlackBishop (popCount (blackbishops b)) +
-                              value WhiteRook   (popCount (whiterooks b))   + value BlackRook   (popCount (blackrooks b)) +
-                              value WhiteQueen  (popCount (whitequeens b))  + value BlackQueen  (popCount (blackqueens b))
+staticeval :: BitBoard -> Int
+staticeval b  = value WhitePawn   (popCount (whitepawns b))   + value BlackPawn   (popCount (blackpawns b)) +
+                value WhiteKnight (popCount (whiteknights b)) + value BlackKnight (popCount (blackknights b)) +
+                value WhiteBishop (popCount (whitebishops b)) + value BlackBishop (popCount (blackbishops b)) +
+                value WhiteRook   (popCount (whiterooks b))   + value BlackRook   (popCount (blackrooks b)) +
+                value WhiteQueen  (popCount (whitequeens b))  + value BlackQueen  (popCount (blackqueens b))
 
 
 

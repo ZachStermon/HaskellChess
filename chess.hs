@@ -1,4 +1,14 @@
-module Chess where
+module Chess(
+  dmove,
+  exists,
+  empty,
+  notfriendlyfire,
+  whitecastle,
+  blackcastle,
+  isenemy,
+  moveisanattack,
+  updateturn
+) where
 
 --Imports
 import Helpers
@@ -178,8 +188,8 @@ promote s (o,d) = updateboard s (changevariable (removepiece (removepiece (board
 
 --the driver for castling, actually performs the moves to move the pieces.
 docastle :: State -> Move -> State
-docastle s (60, 58) = updateboard s (executemove (executemove (board s) (56,59)) (60, 58))
-docastle s (60, 62) = updateboard s (executemove (executemove (board s) (63,61)) (60, 62))
+docastle s (60,58) = updateboard s (executemove (executemove (board s) (56,59)) (60,58))
+docastle s (60,62) = updateboard s (executemove (executemove (board s) (63,61)) (60,62))
 docastle s (4,6)    = updateboard s (executemove (executemove (board s) (7,5)) (4,6))
 docastle s (4,2)    = updateboard s (executemove (executemove (board s) (0,3)) (4,2))
 
@@ -203,8 +213,8 @@ isenemy bb i True  =  testBit (blackpieces bb) (fromIntegral i)
 isenemy bb i False =  testBit (whitepieces bb) (fromIntegral i)
 
 
-moveisanattack :: State -> Move -> Bool
-moveisanattack s (o,d) = exists (board s) d
+moveisanattack :: BitBoard -> Move -> Bool
+moveisanattack bb (o,d) = exists bb d
 
 
 
