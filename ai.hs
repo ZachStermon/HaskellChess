@@ -164,7 +164,7 @@ negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval - d else 
 --                                   where score = -negamax' (domove s m) (d-1) (-b) (-a)
 
 negamax' :: State -> Int -> Int -> Int -> Int
-negamax' s 0 alpha beta = (if turn s then id else (0-)) $ quiescencesearch s 5 alpha beta
+negamax' s 0 alpha beta =  quiescencesearch s 5 alpha beta
 negamax' s d alpha beta | null moves = if incheck s then minval-d else 0
                         | otherwise  = recurse alpha beta moves
                 where moves = sortedmoves s
@@ -207,9 +207,9 @@ nstat s | turn s    = staticeval (board s)
 
 
 
-quiescencesearch :: State -> Int -> Int -> Int -> Int
-quiescencesearch s 0 alpha beta                    = staticeval (board s)
-quiescencesearch s d alpha beta | null moves       = if incheck s then minval else 0
+quiescencesearch :: State -> Int -> Int -> Int
+quiescencesearch s alpha beta   | null moves       = if incheck s then minval else 0
+                                | null filteredmoves = (if turn s then id else (0-)) $ staticeval (board s)
                                 | standpat >= beta = beta
                                 | alpha < standpat = recurse standpat beta filteredmoves
                                 | otherwise        = recurse alpha    beta filteredmoves
@@ -221,7 +221,7 @@ quiescencesearch s d alpha beta | null moves       = if incheck s then minval el
         recurse a b (m:ms)   | score >= b = b                 --fail hard
                              | score > a  = recurse score b ms--fail soft
                              | otherwise  = recurse a b ms    --default
-                    where score = -quiescencesearch (domove s m) (d-1) (-b) (-a)
+                    where score = -quiescencesearch (domove s m) (-b) (-a)
 
 
 

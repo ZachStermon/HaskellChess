@@ -1,0 +1,6 @@
+cabal: Entering directory '/tmp/cabal-tmp-2492/gtk2hs-buildtools-0.13.8.0'
+Configuring gtk2hs-buildtools-0.13.8.0...
+cabal: The program 'alex' version >=3.0.1 is required but it could not be
+found.
+
+cabal: Leaving directory '/tmp/cabal-tmp-2492/gtk2hs-buildtools-0.13.8.0'

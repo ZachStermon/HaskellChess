@@ -1,0 +1,11 @@
+cabal: Entering directory '/tmp/cabal-tmp-1482/hashable-1.3.1.0'
+Configuring hashable-1.3.1.0...
+Preprocessing library for hashable-1.3.1.0..
+Building library for hashable-1.3.1.0..
+[1 of 5] Compiling Data.Hashable.Class ( src/Data/Hashable/Class.hs, dist/dist-sandbox-e36274da/build/Data/Hashable/Class.o )
+[2 of 5] Compiling Data.Hashable.Generic.Instances ( src/Data/Hashable/Generic/Instances.hs, dist/dist-sandbox-e36274da/build/Data/Hashable/Generic/Instances.o )
+[3 of 5] Compiling Data.Hashable.Generic ( src/Data/Hashable/Generic.hs, dist/dist-sandbox-e36274da/build/Data/Hashable/Generic.o )
+[4 of 5] Compiling Data.Hashable    ( src/Data/Hashable.hs, dist/dist-sandbox-e36274da/build/Data/Hashable.o )
+[5 of 5] Compiling Data.Hashable.Lifted ( src/Data/Hashable/Lifted.hs, dist/dist-sandbox-e36274da/build/Data/Hashable/Lifted.o )
+Installing library in /mnt/c/CS/Atom Code/HaskellChess/.cabal-sandbox/lib/x86_64-linux-ghc-8.6.5/hashable-1.3.1.0-9sf0OH8VruBBlkFY5Dsli0
+cabal: Leaving directory '/tmp/cabal-tmp-1482/hashable-1.3.1.0'
