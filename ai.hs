@@ -163,17 +163,19 @@ negamax s h d a b | whitekings (board s) == 0 = (if turn s then minval - d else 
 --                                          | otherwise  = recurse a b ms    --default
 --                                   where score = -negamax' (domove s m) (d-1) (-b) (-a)
 
+--negated (for black) minimax with a/b pruning
 negamax' :: State -> Int -> Int -> Int -> Int
-negamax' s 0 alpha beta =  quiescencesearch s 5 alpha beta
+negamax' s 0 alpha beta =  quiescencesearch s alpha beta
 negamax' s d alpha beta | null moves = if incheck s then minval-d else 0
                         | otherwise  = recurse alpha beta moves
-                where moves = sortedmoves s
+                where moves = getmoves s --sortedmoves s
                       recurse a b []                  = a
                       recurse a b (m:ms) | score >= b = b                 --fail hard
                                          | score > a  = recurse score b ms--fail soft
                                          | otherwise  = recurse a b ms    --default
                                   where score = -negamax' (domove s m) (d-1) (-b) (-a)
 
+--driver for negamax'
 callnegamax' :: State -> Int -> (Int, Move)
 callnegamax' s d = recurse (-9999,(64,64)) (9999,(64,64)) (sortedmoves s)
   where recurse (a,am) (b,bm) []                  = (a,am)
@@ -181,6 +183,30 @@ callnegamax' s d = recurse (-9999,(64,64)) (9999,(64,64)) (sortedmoves s)
                                      | score > a  = recurse (score,m) (b,bm) ms  --fail soft
                                      | otherwise  = recurse (a,am) (b,bm) ms     --default
                     where score = -negamax' (domove s m) d (-b) (-a)
+
+--search all attacks
+quiescencesearch :: State -> Int -> Int -> Int
+quiescencesearch s alpha beta   | null filteredmoves = (if turn s then id else (0-)) $ staticeval (board s)
+                                | standpat >= beta = beta
+                                | alpha < standpat = recurse standpat beta filteredmoves
+                                | otherwise        = recurse alpha    beta filteredmoves
+  where moves = getsudomoves s
+        filteredmoves = filter (moveisanattack bb) moves
+        bb = board s
+        standpat = staticeval bb
+        recurse a b [] = a
+        recurse a b (m:ms)   | score >= b = b                 --fail hard
+                             | score > a  = recurse score b ms--fail soft
+                             | otherwise  = recurse a b ms    --default
+                    where score = -quiescencesearch (domove s m) (-b) (-a)
+
+
+
+
+
+
+
+
 
 sortedmoves :: State -> [Move]
 sortedmoves s = sortbool (board s) [] (getmoves s)
@@ -207,21 +233,6 @@ nstat s | turn s    = staticeval (board s)
 
 
 
-quiescencesearch :: State -> Int -> Int -> Int
-quiescencesearch s alpha beta   | null moves       = if incheck s then minval else 0
-                                | null filteredmoves = (if turn s then id else (0-)) $ staticeval (board s)
-                                | standpat >= beta = beta
-                                | alpha < standpat = recurse standpat beta filteredmoves
-                                | otherwise        = recurse alpha    beta filteredmoves
-  where moves = (getmoves s)
-        filteredmoves = filter (moveisanattack bb) moves
-        bb = board s
-        standpat = staticeval bb
-        recurse a b []     = a
-        recurse a b (m:ms)   | score >= b = b                 --fail hard
-                             | score > a  = recurse score b ms--fail soft
-                             | otherwise  = recurse a b ms    --default
-                    where score = -quiescencesearch (domove s m) (-b) (-a)
 
 
 
@@ -242,9 +253,9 @@ minimax s ms depth | depth == 0 = (if turn s then maximum else minimum) $ map (e
             let sign = if turn s then id else (0 -)
                 newstate = domove s m
                 newmoves = getmoves newstate
-                in if null newmoves
-                    then if incheck newstate then (sign maxval,m) else (0,m)
-                    else (fst $ minimax newstate newmoves (depth-1),m)
+            in if null newmoves
+                then if incheck newstate then (sign maxval,m) else (0,m)
+                else (fst $ minimax newstate newmoves (depth-1),m)
 
 
 
@@ -254,13 +265,6 @@ endgame s   | incheck s = if turn s then maxval else minval
 
 
 
-fst'  (a,b,c,d) = a
-snd'  (a,b,c,d) = b
-trd'  (a,b,c,d) = c
-fth'  (a,b,c,d) = d
-
-maximum' [(a,b,c)] = (maximum a,b,c)
-minimum' [(a,b,c)] = (minimum a,b,c)
 
 
 

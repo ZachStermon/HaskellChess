@@ -17,7 +17,14 @@ split n = takeWhile (not.null) . map (take n) . iterate (drop n)
 
 --takes a character and returns the row, so that an input of e2e4 turns into 32,34 for example.
 ctr :: Char -> Word8
-ctr x = abs ((read [x]) - 8)
+ctr '1' = 7
+ctr '2' = 6
+ctr '3' = 5
+ctr '4' = 4
+ctr '5' = 3
+ctr '6' = 2
+ctr '7' = 1
+ctr '8' = 0
 
 --same as above, helper for turning character into column.
 ctc :: Char -> Word8
