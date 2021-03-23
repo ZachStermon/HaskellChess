@@ -9,6 +9,7 @@ module Printing
 , printword
 , printmoves
 , changevariable
+, printmove
 ) where
 
 

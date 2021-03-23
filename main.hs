@@ -5,6 +5,7 @@ import Types
 import Printing
 import Movechecker
 import Boards
+import Control.Monad
 
 --This function creates the initial chess board position
 --Then the function calls the main play function
@@ -45,36 +46,42 @@ info = do
        putStrLn "r -> Black Rook"
        putStrLn "q -> Black Queen"
        putStrLn "k -> Black King"
+       putStrLn "type 'R' to resign"
        putStrLn ""
        start
 
 start :: IO()
 start = do
             e <- getChar
-            putStrLn "Play computer or another human? (C,H)"
+            putStrLn "Play computer, another human, or have bots battle? (C,H,B)"
             gameselection <- getChar
-            if gameselection == 'c' || gameselection == 'C' then do playbotsetup
-              else do e <- getLine
-                      play (makestate initial True)
 
+            if gameselection == 'c' || gameselection == 'C' then do playbotsetup
+            else if gameselection == 'h' || gameselection == 'H' then do    e <- getLine
+                                                                            play (makestate initial True)
+                 else if gameselection == 'b' || gameselection == 'B' then do botbattle (makestate initial True)
+                      else do putStrLn "Not recognized, try again"
+                              start
 
 
 --HUMAN ONLY GAME
 --This function is played repeatedly for each players move
 play :: State -> IO()
 play s           = do
-                printboard s
+                putStrLn $ show (board s)
+                when (incheck s) $ putStrLn "Check"
                 if turn s then putStrLn "It Is Now Whites Turn," else putStrLn "It Is Now Blacks Turn, "
                 putStrLn "Current evaluation: "
-                putStrLn (show (staticeval s))
-                putStrLn "Enter valid move (a1b2): "
+                putStrLn (show (staticeval (board s)))
+                putStrLn "Enter valid move (e2e4): "
                 move <- getLine
+                when (move == "r" || move == "R") $ reset' (not $ turn s)
                 movement s (stringtomove(move))
 
 --This function tests if the move is valid and plays it if it is
 movement :: State -> Move -> IO()
 movement s m = if validmove s m
-                 then putStrLn "Good Move" >> play (domove s m)
+                 then play (domove s m)
                  else putStrLn "Bad Move" >> play s
 
 
@@ -98,45 +105,53 @@ playbotsetup = do
 playbotw :: State -> IO()
 --turn is white
 playbotw s | turn s           = do
-                printboard s
+                putStrLn $ show (board s)
+                when (incheck s) $ putStrLn "Check"
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Whites Turn,"
                       putStrLn "Current evaluation: "
-                      putStrLn (show (staticeval s))
+                      putStrLn (show (staticeval (board s)))
                       putStrLn "Enter valid move (a1b2): "
                       move <- getLine
+                      when (move == "r" || move == "R") $ reset' (not $ turn s)
                       movementbotw s (stringtomove(move))
 --turn is black
           | otherwise         = do
-                printboard s
+                putStrLn $ show (board s)
+                when (incheck s) $ putStrLn "Check"
                 putStrLn "Current evaluation: "
-                putStrLn (show (staticeval s))
+                putStrLn (show (staticeval (board s)))
                 if gameover s then reset' True else do
-                      let m = snd $ findbestmove s
+                      let m = findbestmove s
+                      putStrLn "Bot evaluation: "
+                      putStrLn (show $ fst m)
                       putStrLn "Bot played:"
-                      putStrLn (show m)
-                      playbotw (domove s m)
+                      putStrLn (printmove (snd m))
+                      playbotw (domove s (snd m))
 
 playbotb :: State -> IO()
 --turn is white
 playbotb s | turn s = do
-                printboard s
-                putStrLn "Current evaluation: "
-                putStrLn (show (staticeval s))
+                putStrLn $ show (board s)
+                when (incheck s) $ putStrLn "Check"
                 if gameover s then reset' True else do
-                      let m = snd $ findbestmove s
+                      let m = findbestmove s
+                      putStrLn "Bot evaluation: "
+                      putStrLn (show $ fst m)
                       putStrLn "Bot played:"
-                      putStrLn (show m)
-                      playbotb (domove s m)
+                      putStrLn (printmove (snd m))
+                      playbotb (domove s (snd m))
 --turn is black
           | otherwise  = do
-                printboard s
+                putStrLn $ show (board s)
+                when (incheck s) $ putStrLn "Check"
                 if gameover s then reset' False else do
                       putStrLn "It Is Now Blacks Turn,"
                       putStrLn "Current evaluation: "
-                      putStrLn (show (staticeval s))
+                      putStrLn (show (staticeval (board s)))
                       putStrLn "Enter valid move (a1b2): "
                       move <- getLine
+                      when (move == "r" || move == "R") $ reset' (not $ turn s)
                       movementbotb s (stringtomove(move))
 
 
@@ -149,6 +164,20 @@ movementbotw :: State -> Move -> IO()
 movementbotw s m = if validmove s m
                then putStrLn "Good Move" >> playbotw (domove s m)
                else putStrLn "Bad Move" >> playbotw s
+
+botbattle :: State -> IO()
+botbattle s = do
+              putStrLn $ show (board s)
+              when (incheck s) $ putStrLn "Check"
+              if gameover s then reset' (turn s) else do
+                let m = findbestmove s
+                putStrLn "Bot evaluation: "
+                putStrLn (show $ fst m)
+                putStrLn "Bot played:"
+                putStrLn (printmove (snd m))
+                botbattle (domove s (snd m))
+
+
 
 
 

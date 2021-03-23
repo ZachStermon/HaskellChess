@@ -57,7 +57,8 @@ removeDuplicates xs = removeDuplicatesHelper xs []
 main = do
     contents <- readFile "out4.pgn"
     let list = map getmovesfromline (lines contents)
-    putStrLn $ show (createtree list 0)
+    putStrLn (show list)
+    -- writeFile "out5.pgn" (unlines list)
 
 -- main = do
 --     contents <- readFile "out1.pgn"
@@ -91,8 +92,3 @@ translateline s | s!!0 == '[' = s
 translatewords :: String -> String
 translatewords s  | length s == 4 = show $ stringtomove s
                   | otherwise     = s
-
-stringisamove :: String -> Bool
-stringisamove [] = False
-stringisamove s | length s /= 4 = False
-                | otherwise     = True

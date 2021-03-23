@@ -39,9 +39,9 @@ moveit (s,(_,m)) = (newstate, findbestmove newstate)
 
 
 
---looks through the list of movesranked and returns the move with the highest value, hopefully a found checkmate.
+--called from main to find best move for bot player
 findbestmove :: State -> (Int, Move)
-findbestmove s = (if turn s then maximum else minimum) $ foreach s
+findbestmove s = callnegamax' s maxdepth
 
 
 

@@ -9,7 +9,7 @@ import Data.Word (Word64)
 --for testing only
 import Boards
 import Movechecker
-
+import Printing
 --staticeval is used for evaluating the static board snapshot, diiferent pieces have different values and added weights make certain pieces worth more in different areas of the board.
 -- stalemate cannot happen in testing, kings can be captured
 -- staticeval :: State -> Int
@@ -27,17 +27,21 @@ staticeval b  = value WhitePawn   (popCount (whitepawns b))   + value BlackPawn 
                 value WhiteKnight (popCount (whiteknights b)) + value BlackKnight (popCount (blackknights b)) +
                 value WhiteBishop (popCount (whitebishops b)) + value BlackBishop (popCount (blackbishops b)) +
                 value WhiteRook   (popCount (whiterooks b))   + value BlackRook   (popCount (blackrooks b)) +
-                value WhiteQueen  (popCount (whitequeens b))  + value BlackQueen  (popCount (blackqueens b))
+                value WhiteQueen  (popCount (whitequeens b))  + value BlackQueen  (popCount (blackqueens b)) +
+                a (map (getspot b) [0..63]) [0..63]
 
 
 
 
 
--- + (weightedposition x n)
-
+a :: [Piece] -> [Int] -> Int
+a [] _ = 0
+a _ [] = 0
+a (x:xs) (i:is) = (weightedposition x i) + a xs is
 
 --this is a helper for the board weights(which can be seen in weights.hs)
 weightedposition :: Piece -> Int -> Int
+weightedposition Void         n   = 0
 weightedposition WhitePawn    n   =       weightedpawnwhite   !! n
 weightedposition WhiteKnight  n   =       weightedknightwhite !! n
 weightedposition WhiteBishop  n   =       weightedbishopwhite !! n
